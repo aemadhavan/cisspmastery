@@ -2,18 +2,13 @@ import { auth } from '@clerk/nextjs/server';
 
 /**
  * Check if the current user has access to paid features
- * TODO: Implement proper subscription checking with Clerk metadata or database
+ * Uses Clerk's has() method to check subscription plan
  */
 export async function hasPaidAccess() {
-  const { userId } = await auth();
+  const { has } = await auth();
 
-  if (!userId) {
-    return false;
-  }
-
-  // TODO: Check user's subscription status from publicMetadata or database
-  // For now, return true for all authenticated users
-  return true;
+  // Check if user has the 'paid' plan using Clerk Billing
+  return has ? has({ plan: 'paid' }) : false;
 }
 
 /**
@@ -26,18 +21,19 @@ export async function hasFreeAccess() {
 
 /**
  * Get the user's current plan
- * TODO: Implement proper plan detection from Clerk metadata or database
+ * Returns 'paid' or 'free_user' based on Clerk Billing
  */
 export async function getUserPlan() {
-  const { userId } = await auth();
+  const { has } = await auth();
 
-  if (!userId) {
-    return 'free';
+  if (!has) {
+    return 'free_user';
   }
 
-  // TODO: Check user's publicMetadata for subscription plan
-  // const user = await clerkClient.users.getUser(userId);
-  // const plan = user.publicMetadata?.plan;
+  // Check if user has the 'paid' plan
+  if (has({ plan: 'paid' })) {
+    return 'paid';
+  }
 
-  return 'paid'; // Default to paid for authenticated users for now
+  return 'free_user';
 }

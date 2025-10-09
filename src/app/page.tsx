@@ -4,8 +4,10 @@ import { ArrowRight } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 
 export default async function Home() {
-  await auth();
-  const hasPaidPlan = false; // TODO: Check user subscription status
+  const { has } = await auth();
+
+  // Check if user has paid subscription using Clerk Billing has() method
+  const hasPaidPlan = has ? has({ plan: 'paid' }) : false;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Hero Section */}
@@ -25,21 +27,12 @@ export default async function Home() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              {!hasPaidPlan && (
-                <Link
-                  href="/pricing"
-                  className="group bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold px-8 py-4 rounded-full transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  BUY NOW
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              )}
-
               <Link
-                href="/sign-in"
-                className="border-2 border-purple-500 text-purple-400 hover:bg-purple-500/10 font-semibold px-8 py-4 rounded-full transition-all duration-300 flex items-center justify-center"
+                href={hasPaidPlan ? "/dashboard" : "/pricing"}
+                className="group bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold px-8 py-4 rounded-full transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                {hasPaidPlan ? 'Go to Dashboard' : 'Try Free'}
+                {hasPaidPlan ? 'Go to Dashboard' : 'BUY NOW'}
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
