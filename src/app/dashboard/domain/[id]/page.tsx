@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -30,7 +30,7 @@ const SAMPLE_FLASHCARDS: Record<string, Array<{ question: string; answer: string
     },
     {
       question: "What is Risk Management?",
-      answer: "The process of identifying, assessing, and controlling threats to an organization's capital and earnings, including strategic, financial, operational, and security risks."
+      answer: "The process of identifying, assessing, and controlling threats to an organization&apos;s capital and earnings, including strategic, financial, operational, and security risks."
     }
   ],
   "2": [
@@ -46,7 +46,7 @@ const SAMPLE_FLASHCARDS: Record<string, Array<{ question: string; answer: string
   "3": [
     {
       question: "What is symmetric encryption?",
-      answer: "Encryption method that uses the same key for both encryption and decryption. It's faster but requires secure key distribution."
+      answer: "Encryption method that uses the same key for both encryption and decryption. It&apos;s faster but requires secure key distribution."
     },
     {
       question: "What is asymmetric encryption?",
@@ -98,7 +98,6 @@ const DOMAIN_NAMES: Record<string, string> = {
 
 export default function DomainStudyPage() {
   const params = useParams();
-  const router = useRouter();
   const domainId = params.id as string;
 
   const flashcards = SAMPLE_FLASHCARDS[domainId] || [];
@@ -107,7 +106,6 @@ export default function DomainStudyPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showRating, setShowRating] = useState(false);
   const [studiedCards, setStudiedCards] = useState<Set<number>>(new Set());
-  const [isFlipped, setIsFlipped] = useState(false);
 
   const currentCard = flashcards[currentIndex];
   const progress = (studiedCards.size / flashcards.length) * 100;
@@ -124,7 +122,6 @@ export default function DomainStudyPage() {
     if (currentIndex < flashcards.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setShowRating(false);
-      setIsFlipped(false);
     } else {
       // Completed all cards
       setShowRating(false);
@@ -132,7 +129,6 @@ export default function DomainStudyPage() {
   };
 
   const handleFlip = () => {
-    setIsFlipped(true);
     if (!showRating) {
       setTimeout(() => setShowRating(true), 300);
     }
@@ -142,7 +138,6 @@ export default function DomainStudyPage() {
     setCurrentIndex(0);
     setStudiedCards(new Set());
     setShowRating(false);
-    setIsFlipped(false);
   };
 
   if (flashcards.length === 0) {
@@ -157,7 +152,7 @@ export default function DomainStudyPage() {
           </Link>
           <div className="text-center text-white">
             <h1 className="text-2xl font-bold mb-4">No flashcards available</h1>
-            <p className="text-gray-400">This domain doesn't have any flashcards yet.</p>
+            <p className="text-gray-400">This domain doesn&apos;t have any flashcards yet.</p>
           </div>
         </div>
       </div>
@@ -231,7 +226,7 @@ export default function DomainStudyPage() {
               Great Job!
             </h2>
             <p className="text-xl text-gray-300">
-              You've completed all {flashcards.length} cards in this domain.
+              You&apos;ve completed all {flashcards.length} cards in this domain.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
