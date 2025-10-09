@@ -4,22 +4,22 @@ import { ArrowRight } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 
 export default async function Home() {
-  const { has } = await auth();
-  const hasPaidPlan = has({ plan: 'paid' });
+  await auth();
+  const hasPaidPlan = false; // TODO: Check user subscription status
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Hero Section */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16 items-center">
           {/* Left Content */}
-          <div className="text-white space-y-8">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+          <div className="text-white space-y-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight">
               <span className="text-amber-400">CISSP A-Z</span> for Security Professionals:
               <br />
               <span className="text-white">Pass Your Exam in Weeks, not Months</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-gray-300 leading-relaxed">
+            <p className="text-base sm:text-lg lg:text-xl text-gray-300 leading-relaxed">
               Fast-track your cybersecurity career, stay ahead in the industry and master
               the CISSP exam with confidence-based learning and adaptive spaced repetition.
             </p>
