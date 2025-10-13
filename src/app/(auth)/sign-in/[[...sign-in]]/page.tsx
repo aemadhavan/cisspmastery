@@ -1,10 +1,12 @@
 import { SignIn } from '@clerk/nextjs';
 
-export default function SignInPage({
+export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: { redirect_url?: string };
+  searchParams: Promise<{ redirect_url?: string }>;
 }) {
+  const params = await searchParams;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="w-full max-w-md">
@@ -19,7 +21,7 @@ export default function SignInPage({
               card: "shadow-xl",
             }
           }}
-          forceRedirectUrl={searchParams.redirect_url || undefined}
+          forceRedirectUrl={params.redirect_url || undefined}
         />
       </div>
     </div>
