@@ -16,14 +16,13 @@ export default async function Home() {
           {/* Left Content */}
           <div className="text-white space-y-6">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight">
-              <span className="text-amber-400">CISSP A-Z</span> for Security Professionals:
+              <span className="text-amber-400">The CISSP Click !!!</span> for Security Professionals:
               <br />
-              <span className="text-white">Pass Your Exam in Weeks, not Months</span>
+              <span className="text-white">No fluff. No overwhelm.</span>
             </h1>
 
             <p className="text-base sm:text-lg lg:text-xl text-gray-300 leading-relaxed">
-              Fast-track your cybersecurity career, stay ahead in the industry and master
-              the CISSP exam with confidence-based learning and adaptive spaced repetition.
+              First-attempt CISSP success isn't about memorization — My battle-tested notes show you how to think like a certified pro. Lock in yearly access at $0.17/day before this deal expires
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
