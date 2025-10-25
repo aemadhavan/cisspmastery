@@ -36,10 +36,16 @@ export default async function Home() {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               ) : (
-                <BuyNowButton
-                  priceId={process.env.STRIPE_LIFETIME_PRICE_ID!}
-                  text="BUY NOW"
-                />
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400 text-2xl line-through">$120</span>
+                    <span className="text-amber-400 text-4xl font-bold">$60 SGD</span>
+                  </div>
+                  <BuyNowButton
+                    priceId={process.env.STRIPE_LIFETIME_PRICE_ID!}
+                    text="BUY NOW - Limited Time Offer"
+                  />
+                </div>
               )}
             </div>
 
