@@ -23,7 +23,7 @@ export default async function Home() {
             </h1>
 
             <p className="text-base sm:text-lg lg:text-xl text-gray-300 leading-relaxed">
-              First-attempt CISSP success isn't about memorization — My battle-tested notes show you how to think like a certified pro. Lock in yearly access at $0.17/day before this deal expires
+              First-attempt CISSP success isn&apos;t about memorization — My battle-tested notes show you how to think like a certified pro. Lock in yearly access at $0.17/day before this deal expires
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">

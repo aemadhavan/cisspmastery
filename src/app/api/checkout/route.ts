@@ -9,9 +9,7 @@ export async function POST(req: Request) {
   try {
     console.log("Checkout API called - route hit!");
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: '2024-11-20.acacia' as any,
-    });
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
     const { userId } = await auth();
     const user = await currentUser();

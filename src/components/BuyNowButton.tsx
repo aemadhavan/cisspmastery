@@ -103,7 +103,7 @@ export default function BuyNowButton({
               Enter Your Email
             </h2>
             <p className="text-gray-300 mb-6">
-              We'll send you a sign-in link after your purchase is complete.
+              We&apos;ll send you a sign-in link after your purchase is complete.
             </p>
 
             <form onSubmit={handleEmailSubmit}>
