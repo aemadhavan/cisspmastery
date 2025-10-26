@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { domains, topics, decks, flashcards, userCardProgress } from '@/lib/db/schema';
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { domains, flashcards, userCardProgress } from '@/lib/db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 
 /**
  * GET /api/progress/domain/[domainId]
  * Get user's progress statistics for a specific domain
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ domainId: string }> }
 ) {
   try {

@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
-import { Home, LayoutDashboard, FileText, Users, BarChart3 } from "lucide-react";
+import { Home, LayoutDashboard, FileText, BarChart3 } from "lucide-react";
 
 export default async function AdminLayout({
   children,

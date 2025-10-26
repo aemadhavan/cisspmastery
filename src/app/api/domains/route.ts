@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { domains, topics, decks } from '@/lib/db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 
 /**
  * GET /api/domains
  * Fetch all CISSP domains with their topics and total card counts
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const { userId } = await auth();
 

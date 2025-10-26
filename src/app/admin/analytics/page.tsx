@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, TrendingUp, Award, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -36,10 +35,23 @@ interface DomainProgress {
   progress: number;
 }
 
+interface UserDetails {
+  user: {
+    name: string | null;
+    email: string;
+  };
+  stats: {
+    totalCardsStudied: number;
+    studyStreakDays: number;
+    totalStudyTime: number;
+  };
+  domainProgress: DomainProgress[];
+}
+
 export default function AdminAnalyticsPage() {
   const [users, setUsers] = useState<UserAnalytics[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [userDetails, setUserDetails] = useState<any>(null);
+  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [domainProgress, setDomainProgress] = useState<DomainProgress[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchEmail, setSearchEmail] = useState("");
@@ -55,7 +67,7 @@ export default function AdminAnalyticsPage() {
       if (!res.ok) throw new Error("Failed to load users");
       const data = await res.json();
       setUsers(data.users || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load user analytics");
     } finally {
       setLoading(false);
@@ -71,7 +83,7 @@ export default function AdminAnalyticsPage() {
       const data = await res.json();
       setUserDetails(data);
       setDomainProgress(data.domainProgress || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load user details");
     } finally {
       setLoading(false);

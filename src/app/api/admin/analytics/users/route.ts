@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
-import { users, userStats, userCardProgress, domains, flashcards } from '@/lib/db/schema';
+import { users, userStats, userCardProgress, flashcards } from '@/lib/db/schema';
 import { eq, sql, desc, and, inArray } from 'drizzle-orm';
 
 /**

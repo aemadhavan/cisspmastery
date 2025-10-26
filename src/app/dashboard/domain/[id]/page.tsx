@@ -44,6 +44,7 @@ export default function DomainStudyPage() {
   // Load flashcards on mount
   useEffect(() => {
     loadFlashcards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domainId]);
 
   const loadFlashcards = async () => {
@@ -55,7 +56,7 @@ export default function DomainStudyPage() {
       const data = await res.json();
       setDomain(data.domain);
       setFlashcards(data.flashcards || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load flashcards");
     } finally {
       setLoading(false);
@@ -141,7 +142,6 @@ export default function DomainStudyPage() {
 
   const allCardsStudied = studiedCards.size === flashcards.length;
   const domainName = domain?.name || "Unknown Domain";
-  const domainOrder = flashcards[0]?.topicName ? null : domainId;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">

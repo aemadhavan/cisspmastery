@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,24 +17,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface Domain {
-  id: string;
-  name: string;
-  order: number;
-}
-
-interface Topic {
-  id: string;
-  domainId: string;
-  name: string;
-}
-
-interface Deck {
-  id: string;
-  topicId: string;
-  name: string;
-}
-
 interface Flashcard {
   id: string;
   deckId: string;
@@ -47,9 +29,7 @@ interface Flashcard {
 }
 
 export default function AdminFlashcardsPage() {
-  const [domains, setDomains] = useState<Domain[]>([]);
-  const [selectedDomainId, setSelectedDomainId] = useState<string>("");
-  const [selectedDeckId, setSelectedDeckId] = useState<string>("");
+  const [selectedDeckId] = useState<string>("");
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -64,22 +44,6 @@ export default function AdminFlashcardsPage() {
     deckId: "",
   });
 
-  // Load domains on mount
-  useEffect(() => {
-    loadDomains();
-  }, []);
-
-  const loadDomains = async () => {
-    try {
-      const res = await fetch("/api/domains");
-      if (!res.ok) throw new Error("Failed to load domains");
-      const data = await res.json();
-      setDomains(data.domains || []);
-    } catch (error) {
-      toast.error("Failed to load domains");
-    }
-  };
-
   const loadFlashcards = async (deckId: string) => {
     if (!deckId) return;
 
@@ -89,7 +53,7 @@ export default function AdminFlashcardsPage() {
       if (!res.ok) throw new Error("Failed to load flashcards");
       const data = await res.json();
       setFlashcards(data.flashcards || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load flashcards");
     } finally {
       setLoading(false);
@@ -152,7 +116,7 @@ export default function AdminFlashcardsPage() {
       if (selectedDeckId) {
         loadFlashcards(selectedDeckId);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete flashcard");
     } finally {
       setLoading(false);

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userCardProgress, flashcards, studySessions, sessionCards } from '@/lib/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { userCardProgress, flashcards, sessionCards } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * POST /api/progress/card
