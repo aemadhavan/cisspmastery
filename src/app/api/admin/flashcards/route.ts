@@ -53,11 +53,12 @@ export async function GET(request: NextRequest) {
       total: allFlashcards.length,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching flashcards:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch flashcards';
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch flashcards' },
-      { status: error.message?.includes('Unauthorized') ? 403 : 500 }
+      { error: errorMessage },
+      { status: errorMessage.includes('Unauthorized') ? 403 : 500 }
     );
   }
 }
@@ -128,11 +129,12 @@ export async function POST(request: NextRequest) {
       flashcard,
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating flashcard:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create flashcard';
     return NextResponse.json(
-      { error: error.message || 'Failed to create flashcard' },
-      { status: error.message?.includes('Unauthorized') ? 403 : 500 }
+      { error: errorMessage },
+      { status: errorMessage.includes('Unauthorized') ? 403 : 500 }
     );
   }
 }

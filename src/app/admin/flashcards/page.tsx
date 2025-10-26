@@ -128,8 +128,9 @@ export default function AdminFlashcardsPage() {
       if (selectedDeckId) {
         loadFlashcards(selectedDeckId);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save flashcard");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to save flashcard";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

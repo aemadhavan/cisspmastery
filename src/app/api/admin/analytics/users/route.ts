@@ -74,11 +74,12 @@ export async function GET(request: NextRequest) {
       total: usersWithProgress.length,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching user analytics:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch analytics';
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch analytics' },
-      { status: error.message?.includes('Unauthorized') ? 403 : 500 }
+      { error: errorMessage },
+      { status: errorMessage.includes('Unauthorized') ? 403 : 500 }
     );
   }
 }

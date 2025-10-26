@@ -48,11 +48,12 @@ export async function PATCH(
       flashcard: updatedCard,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating flashcard:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update flashcard';
     return NextResponse.json(
-      { error: error.message || 'Failed to update flashcard' },
-      { status: error.message?.includes('Unauthorized') ? 403 : 500 }
+      { error: errorMessage },
+      { status: errorMessage.includes('Unauthorized') ? 403 : 500 }
     );
   }
 }
@@ -101,11 +102,12 @@ export async function DELETE(
       message: 'Flashcard deleted successfully',
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting flashcard:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete flashcard';
     return NextResponse.json(
-      { error: error.message || 'Failed to delete flashcard' },
-      { status: error.message?.includes('Unauthorized') ? 403 : 500 }
+      { error: errorMessage },
+      { status: errorMessage.includes('Unauthorized') ? 403 : 500 }
     );
   }
 }
