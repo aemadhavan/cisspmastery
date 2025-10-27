@@ -509,7 +509,7 @@ export default function AdminFlashcardsPage() {
                   New Flashcard
                 </Button>
               </DialogTrigger>
-            <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+            <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingCard ? "Edit Flashcard" : "Create New Flashcard"}
@@ -519,7 +519,7 @@ export default function AdminFlashcardsPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4 mt-4">
+              <div className="space-y-4 mt-4 pb-4">
                 {/* Domain Selection */}
                 <div>
                   <Label htmlFor="domain">Domain (Required)</Label>

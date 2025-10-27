@@ -179,7 +179,7 @@ export function MultiImageUpload({
                   type="button"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-slate-700 text-white hover:bg-slate-800"
+                  className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white"
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Select Images
