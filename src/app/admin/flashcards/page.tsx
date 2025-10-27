@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,12 +27,43 @@ interface Flashcard {
   isPublished: boolean;
 }
 
+interface Deck {
+  id: string;
+  name: string;
+  description: string | null;
+  cardCount: number;
+  order: number;
+  isPremium: boolean;
+}
+
+interface Topic {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  decks: Deck[];
+}
+
+interface Domain {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  icon: string | null;
+  topics: Topic[];
+}
+
 export default function AdminFlashcardsPage() {
   const [selectedDeckId] = useState<string>("");
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
+
+  // Domain/Topic/Deck data
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [selectedDomainId, setSelectedDomainId] = useState<string>("");
+  const [selectedTopicId, setSelectedTopicId] = useState<string>("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -44,12 +74,27 @@ export default function AdminFlashcardsPage() {
     deckId: "",
   });
 
-  const loadFlashcards = async (deckId: string) => {
-    if (!deckId) return;
+  const loadDomains = async () => {
+    try {
+      // Fetch all domains with full hierarchy from admin endpoint
+      const res = await fetch('/api/admin/domains');
+      if (!res.ok) throw new Error("Failed to load domains");
+      const data = await res.json();
 
+      setDomains(data.domains || []);
+    } catch (error) {
+      console.error("Failed to load domains:", error);
+      toast.error("Failed to load domains");
+    }
+  };
+
+  const loadFlashcards = async (deckId?: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/flashcards?deckId=${deckId}`);
+      const url = deckId
+        ? `/api/admin/flashcards?deckId=${deckId}`
+        : '/api/admin/flashcards';
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to load flashcards");
       const data = await res.json();
       setFlashcards(data.flashcards || []);
@@ -59,6 +104,12 @@ export default function AdminFlashcardsPage() {
       setLoading(false);
     }
   };
+
+  // Load domains and flashcards on page mount
+  useEffect(() => {
+    loadDomains();
+    loadFlashcards();
+  }, []);
 
   const handleCreateOrUpdate = async () => {
     if (!formData.question || !formData.answer || !formData.deckId) {
@@ -132,19 +183,55 @@ export default function AdminFlashcardsPage() {
       difficulty: card.difficulty,
       deckId: card.deckId,
     });
+
+    // Find and set the domain and topic for the deck
+    for (const domain of domains) {
+      for (const topic of domain.topics) {
+        const deck = topic.decks.find(d => d.id === card.deckId);
+        if (deck) {
+          setSelectedDomainId(domain.id);
+          setSelectedTopicId(topic.id);
+          break;
+        }
+      }
+    }
+
     setDialogOpen(true);
   };
 
   const resetForm = () => {
     setEditingCard(null);
+    setSelectedDomainId("");
+    setSelectedTopicId("");
     setFormData({
       question: "",
       answer: "",
       explanation: "",
       difficulty: 3,
-      deckId: selectedDeckId || "",
+      deckId: "",
     });
   };
+
+  const handleDomainChange = (domainId: string) => {
+    setSelectedDomainId(domainId);
+    setSelectedTopicId("");
+    setFormData({ ...formData, deckId: "" });
+  };
+
+  const handleTopicChange = (topicId: string) => {
+    setSelectedTopicId(topicId);
+    setFormData({ ...formData, deckId: "" });
+  };
+
+  const handleDeckChange = (deckId: string) => {
+    setFormData({ ...formData, deckId });
+  };
+
+  // Get filtered topics and decks based on selections
+  const selectedDomain = domains.find(d => d.id === selectedDomainId);
+  const availableTopics = selectedDomain?.topics || [];
+  const selectedTopic = availableTopics.find(t => t.id === selectedTopicId);
+  const availableDecks = selectedTopic?.decks || [];
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -180,18 +267,66 @@ export default function AdminFlashcardsPage() {
               </DialogHeader>
 
               <div className="space-y-4 mt-4">
+                {/* Domain Selection */}
                 <div>
-                  <Label htmlFor="deckId">Deck (Required)</Label>
-                  <Input
-                    id="deckId"
-                    placeholder="Deck ID"
+                  <Label htmlFor="domain">Domain (Required)</Label>
+                  <Select
+                    value={selectedDomainId}
+                    onValueChange={handleDomainChange}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                      <SelectValue placeholder="Select a domain..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {domains.map((domain) => (
+                        <SelectItem key={domain.id} value={domain.id}>
+                          {domain.icon && `${domain.icon} `}{domain.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Topic Selection */}
+                <div>
+                  <Label htmlFor="topic">Topic (Required)</Label>
+                  <Select
+                    value={selectedTopicId}
+                    onValueChange={handleTopicChange}
+                    disabled={!selectedDomainId}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                      <SelectValue placeholder={selectedDomainId ? "Select a topic..." : "Select domain first"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {availableTopics.map((topic) => (
+                        <SelectItem key={topic.id} value={topic.id}>
+                          {topic.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Deck Selection */}
+                <div>
+                  <Label htmlFor="deck">Deck (Required)</Label>
+                  <Select
                     value={formData.deckId}
-                    onChange={(e) => setFormData({ ...formData, deckId: e.target.value })}
-                    className="bg-slate-900 border-slate-700 text-white"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Note: Select domain and deck from the list above to get the deck ID
-                  </p>
+                    onValueChange={handleDeckChange}
+                    disabled={!selectedTopicId}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                      <SelectValue placeholder={selectedTopicId ? "Select a deck..." : "Select topic first"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {availableDecks.map((deck) => (
+                        <SelectItem key={deck.id} value={deck.id}>
+                          {deck.name} ({deck.cardCount} cards)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -282,12 +417,6 @@ export default function AdminFlashcardsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <p className="text-sm text-gray-400 mb-2">
-              Tip: Load flashcards by entering a deck ID and clicking a domain above
-            </p>
-          </div>
-
           {loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
