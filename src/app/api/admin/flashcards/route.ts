@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
-import { flashcards, decks } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { flashcards, decks, flashcardMedia } from '@/lib/db/schema';
+import { eq, desc, asc } from 'drizzle-orm';
 
 /**
  * GET /api/admin/flashcards
@@ -31,6 +31,9 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        media: {
+          orderBy: [asc(flashcardMedia.order)],
+        },
       },
     });
 
@@ -41,6 +44,11 @@ export async function GET(request: NextRequest) {
         orderBy: [desc(flashcards.order)],
         limit,
         offset,
+        with: {
+          media: {
+            orderBy: [asc(flashcardMedia.order)],
+          },
+        },
       });
 
       return NextResponse.json({ flashcards: cards, total: cards.length });
@@ -72,7 +80,7 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin();
 
     const body = await request.json();
-    const { deckId, question, answer, explanation, difficulty, order, isPublished } = body;
+    const { deckId, question, answer, explanation, difficulty, order, isPublished, media } = body;
 
     if (!deckId || !question || !answer) {
       return NextResponse.json(
@@ -115,6 +123,32 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
+    // Insert media if provided
+    if (media && Array.isArray(media) && media.length > 0) {
+      await db.insert(flashcardMedia).values(
+        media.map((m: {
+          url: string;
+          key: string;
+          fileName: string;
+          fileSize: number;
+          mimeType: string;
+          placement: string;
+          order: number;
+          altText?: string;
+        }) => ({
+          flashcardId: flashcard.id,
+          fileUrl: m.url,
+          fileKey: m.key,
+          fileName: m.fileName,
+          fileSize: m.fileSize,
+          mimeType: m.mimeType,
+          placement: m.placement,
+          order: m.order,
+          altText: m.altText || null,
+        }))
+      );
+    }
+
     // Update deck card count
     await db
       .update(decks)
@@ -124,9 +158,19 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(decks.id, deckId));
 
+    // Fetch the complete flashcard with media
+    const completeFlashcard = await db.query.flashcards.findFirst({
+      where: eq(flashcards.id, flashcard.id),
+      with: {
+        media: {
+          orderBy: [asc(flashcardMedia.order)],
+        },
+      },
+    });
+
     return NextResponse.json({
       success: true,
-      flashcard,
+      flashcard: completeFlashcard,
     }, { status: 201 });
 
   } catch (error) {

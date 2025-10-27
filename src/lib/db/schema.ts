@@ -99,6 +99,21 @@ export const flashcards = pgTable('flashcards', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Flashcard Media table - stores multiple images per flashcard
+export const flashcardMedia = pgTable('flashcard_media', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  flashcardId: uuid('flashcard_id').notNull().references(() => flashcards.id, { onDelete: 'cascade' }),
+  fileUrl: varchar('file_url', { length: 500 }).notNull(), // Cloud storage URL (Vercel Blob)
+  fileKey: varchar('file_key', { length: 500 }).notNull(), // Storage key for deletion
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileSize: integer('file_size').notNull(), // in bytes
+  mimeType: varchar('mime_type', { length: 100 }).notNull(), // image/png, image/jpeg, etc.
+  placement: varchar('placement', { length: 20 }).notNull(), // 'question' or 'answer'
+  order: integer('order').default(0).notNull(), // for ordering multiple images
+  altText: varchar('alt_text', { length: 255 }), // accessibility
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // User card progress table (confidence-based) - Users consume cards
 export const userCardProgress = pgTable('user_card_progress', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -210,6 +225,14 @@ export const flashcardsRelations = relations(flashcards, ({ one, many }) => ({
   }),
   userProgress: many(userCardProgress),
   sessionCards: many(sessionCards),
+  media: many(flashcardMedia), // Multiple images per flashcard
+}));
+
+export const flashcardMediaRelations = relations(flashcardMedia, ({ one }) => ({
+  flashcard: one(flashcards, {
+    fields: [flashcardMedia.flashcardId],
+    references: [flashcards.id],
+  }),
 }));
 
 export const studySessionsRelations = relations(studySessions, ({ one, many }) => ({
