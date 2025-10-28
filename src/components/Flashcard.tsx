@@ -2,14 +2,31 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
+
+interface FlashcardMedia {
+  id: string;
+  url: string;
+  altText: string | null;
+  placement: string;
+  order: number;
+}
 
 interface FlashcardProps {
   question: string;
   answer: string;
+  questionImages?: FlashcardMedia[];
+  answerImages?: FlashcardMedia[];
   onFlip?: () => void;
 }
 
-export default function Flashcard({ question, answer, onFlip }: FlashcardProps) {
+export default function Flashcard({
+  question,
+  answer,
+  questionImages = [],
+  answerImages = [],
+  onFlip
+}: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   const handleFlip = () => {
@@ -20,7 +37,7 @@ export default function Flashcard({ question, answer, onFlip }: FlashcardProps) 
   return (
     <div className="perspective-1000 w-full max-w-2xl mx-auto">
       <div
-        className={`relative w-full h-[400px] transition-transform duration-500 preserve-3d cursor-pointer ${
+        className={`relative w-full h-[500px] transition-transform duration-500 preserve-3d cursor-pointer ${
           isFlipped ? "rotate-y-180" : ""
         }`}
         onClick={handleFlip}
@@ -37,13 +54,32 @@ export default function Flashcard({ question, answer, onFlip }: FlashcardProps) 
             WebkitBackfaceVisibility: "hidden"
           }}
         >
-          <CardContent className="flex flex-col items-center justify-center h-full p-8">
+          <CardContent className="flex flex-col items-center justify-center h-full p-8 overflow-hidden">
             <div className="text-sm font-semibold text-purple-400 mb-4">
               QUESTION
             </div>
             <p className="text-xl sm:text-2xl text-white text-center leading-relaxed">
               {question}
             </p>
+
+            {/* Question Images */}
+            {questionImages.length > 0 && (
+              <div className="mt-6 flex flex-col gap-4 w-full max-w-md">
+                {questionImages.map((img) => (
+                  <div key={img.id} className="relative w-full">
+                    <Image
+                      src={img.url}
+                      alt={img.altText || 'Question image'}
+                      width={500}
+                      height={300}
+                      className="rounded-lg border border-slate-600 object-contain w-full h-auto"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="mt-8 text-sm text-gray-400">
               Click to reveal answer
             </div>
@@ -59,13 +95,32 @@ export default function Flashcard({ question, answer, onFlip }: FlashcardProps) 
             transform: "rotateY(180deg)"
           }}
         >
-          <CardContent className="flex flex-col items-center justify-center h-full p-8">
+          <CardContent className="flex flex-col items-center justify-center h-full p-8 overflow-hidden">
             <div className="text-sm font-semibold text-purple-200 mb-4">
               ANSWER
             </div>
             <p className="text-xl sm:text-2xl text-white text-center leading-relaxed">
               {answer}
             </p>
+
+            {/* Answer Images */}
+            {answerImages.length > 0 && (
+              <div className="mt-6 flex flex-col gap-4 w-full max-w-md">
+                {answerImages.map((img) => (
+                  <div key={img.id} className="relative w-full">
+                    <Image
+                      src={img.url}
+                      alt={img.altText || 'Answer image'}
+                      width={500}
+                      height={300}
+                      className="rounded-lg border border-purple-400 object-contain w-full h-auto"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="mt-8 text-sm text-purple-200">
               Click to see question
             </div>

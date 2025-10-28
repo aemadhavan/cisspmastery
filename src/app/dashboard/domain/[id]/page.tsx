@@ -10,6 +10,14 @@ import Flashcard from "@/components/Flashcard";
 import ConfidenceRating from "@/components/ConfidenceRating";
 import { toast } from "sonner";
 
+interface FlashcardMedia {
+  id: string;
+  url: string;
+  altText: string | null;
+  placement: string;
+  order: number;
+}
+
 interface FlashcardData {
   id: string;
   question: string;
@@ -18,6 +26,7 @@ interface FlashcardData {
   difficulty: number;
   deckName: string;
   topicName: string;
+  media: FlashcardMedia[];
 }
 
 interface DomainData {
@@ -191,6 +200,8 @@ export default function DomainStudyPage() {
             <Flashcard
               question={currentCard.question}
               answer={currentCard.answer}
+              questionImages={currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order)}
+              answerImages={currentCard.media?.filter(m => m.placement === 'answer').sort((a, b) => a.order - b.order)}
               onFlip={handleFlip}
             />
 

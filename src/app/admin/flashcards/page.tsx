@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,34 @@ import { toast } from "sonner";
 import { MultiImageUpload, MediaFile } from "@/components/admin/MultiImageUpload";
 import { ImageLightbox } from "@/components/admin/ImageLightbox";
 
+interface Domain {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  icon: string | null;
+  topics: Topic[];
+}
+
+interface Topic {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  decks: Deck[];
+  domain?: Domain;
+}
+
+interface Deck {
+  id: string;
+  name: string;
+  description: string | null;
+  cardCount: number;
+  order: number;
+  isPremium: boolean;
+  topic?: Topic;
+}
+
 interface Flashcard {
   id: string;
   deckId: string;
@@ -28,32 +57,7 @@ interface Flashcard {
   order: number;
   isPublished: boolean;
   media?: MediaFile[];
-}
-
-interface Deck {
-  id: string;
-  name: string;
-  description: string | null;
-  cardCount: number;
-  order: number;
-  isPremium: boolean;
-}
-
-interface Topic {
-  id: string;
-  name: string;
-  description: string | null;
-  order: number;
-  decks: Deck[];
-}
-
-interface Domain {
-  id: string;
-  name: string;
-  description: string | null;
-  order: number;
-  icon: string | null;
-  topics: Topic[];
+  deck?: Deck;
 }
 
 export default function AdminFlashcardsPage() {
@@ -270,14 +274,21 @@ export default function AdminFlashcardsPage() {
       setAnswerImages(answerMedia);
     }
 
-    // Find and set the domain and topic for the deck
-    for (const domain of domains) {
-      for (const topic of domain.topics) {
-        const deck = topic.decks.find(d => d.id === card.deckId);
-        if (deck) {
-          setSelectedDomainId(domain.id);
-          setSelectedTopicId(topic.id);
-          break;
+    // Set domain and topic based on the card's deck data
+    if (card.deck?.topic?.domain) {
+      // Use nested data from API if available
+      setSelectedDomainId(card.deck.topic.domain.id);
+      setSelectedTopicId(card.deck.topic.id);
+    } else {
+      // Fallback: Find and set the domain and topic for the deck
+      for (const domain of domains) {
+        for (const topic of domain.topics) {
+          const deck = topic.decks.find(d => d.id === card.deckId);
+          if (deck) {
+            setSelectedDomainId(domain.id);
+            setSelectedTopicId(topic.id);
+            break;
+          }
         }
       }
     }
@@ -714,6 +725,24 @@ export default function AdminFlashcardsPage() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
+                      {/* Show Domain/Topic/Deck info if available */}
+                      {card.deck && (
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          {card.deck.topic?.domain && (
+                            <Badge variant="outline" className="text-xs text-blue-400 border-blue-400">
+                              {card.deck.topic.domain.name}
+                            </Badge>
+                          )}
+                          {card.deck.topic && (
+                            <Badge variant="outline" className="text-xs text-purple-400 border-purple-400">
+                              {card.deck.topic.name}
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs text-green-400 border-green-400">
+                            {card.deck.name}
+                          </Badge>
+                        </div>
+                      )}
                       <div className="mb-2">
                         <span className="text-xs text-gray-400">Question:</span>
                         <p className="text-white mt-1">{card.question}</p>

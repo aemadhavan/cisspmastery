@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { domains, topics, decks, flashcards } from '@/lib/db/schema';
+import { domains, topics, decks, flashcards, flashcardMedia } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 
 /**
@@ -34,6 +34,11 @@ export async function GET(
                 flashcards: {
                   orderBy: [asc(flashcards.order)],
                   where: eq(flashcards.isPublished, true),
+                  with: {
+                    media: {
+                      orderBy: [asc(flashcardMedia.order)],
+                    },
+                  },
                 },
               },
             },
@@ -58,6 +63,13 @@ export async function GET(
           deckId: deck.id,
           deckName: deck.name,
           topicName: topic.name,
+          media: card.media.map((m) => ({
+            id: m.id,
+            url: m.fileUrl,
+            altText: m.altText,
+            placement: m.placement,
+            order: m.order,
+          })),
         }))
       )
     );
