@@ -39,7 +39,7 @@ export default async function Home() {
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3">
                     <span className="text-gray-400 text-2xl line-through">$120</span>
-                    <span className="text-amber-400 text-4xl font-bold">$60 SGD</span>
+                    <span className="text-amber-400 text-4xl font-bold">$60 USD</span>
                   </div>
                   <BuyNowButton
                     priceId={process.env.STRIPE_LIFETIME_PRICE_ID!}
