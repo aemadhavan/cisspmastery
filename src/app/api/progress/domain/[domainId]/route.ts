@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { domains, flashcards, userCardProgress } from '@/lib/db/schema';
+import { classes, flashcards, userCardProgress } from '@/lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 /**
  * GET /api/progress/domain/[domainId]
- * Get user's progress statistics for a specific domain
+ * Get user's progress statistics for a specific class (formerly domain)
+ * Note: This endpoint maintains backward compatibility by using the old "domain" naming
  */
 export async function GET(
   _request: NextRequest,
@@ -20,31 +21,27 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get domain with all flashcards
-    const domain = await db.query.domains.findFirst({
-      where: eq(domains.id, domainId),
+    // Get class with all flashcards
+    const classItem = await db.query.classes.findFirst({
+      where: eq(classes.id, domainId),
       with: {
-        topics: {
+        decks: {
           with: {
-            decks: {
-              with: {
-                flashcards: {
-                  where: eq(flashcards.isPublished, true),
-                },
-              },
+            flashcards: {
+              where: eq(flashcards.isPublished, true),
             },
           },
         },
       },
     });
 
-    if (!domain) {
+    if (!classItem) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
-    // Get all flashcard IDs in this domain
-    const flashcardIds = domain.topics.flatMap((topic) =>
-      topic.decks.flatMap((deck) => deck.flashcards.map((card) => card.id))
+    // Get all flashcard IDs in this class
+    const flashcardIds = classItem.decks.flatMap((deck) =>
+      deck.flashcards.map((card) => card.id)
     );
 
     if (flashcardIds.length === 0) {
@@ -59,7 +56,7 @@ export async function GET(
       });
     }
 
-    // Get user's progress for all cards in this domain
+    // Get user's progress for all cards in this class
     const progressRecords = await db
       .select()
       .from(userCardProgress)

@@ -33,17 +33,17 @@ export type NewSubscription = typeof schema.subscriptions.$inferInsert;
 export type Payment = typeof schema.payments.$inferSelect;
 export type NewPayment = typeof schema.payments.$inferInsert;
 
-export type Domain = typeof schema.domains.$inferSelect;
-export type NewDomain = typeof schema.domains.$inferInsert;
-
-export type Topic = typeof schema.topics.$inferSelect;
-export type NewTopic = typeof schema.topics.$inferInsert;
+export type Class = typeof schema.classes.$inferSelect;
+export type NewClass = typeof schema.classes.$inferInsert;
 
 export type Deck = typeof schema.decks.$inferSelect;
 export type NewDeck = typeof schema.decks.$inferInsert;
 
 export type Flashcard = typeof schema.flashcards.$inferSelect;
 export type NewFlashcard = typeof schema.flashcards.$inferInsert;
+
+export type FlashcardMedia = typeof schema.flashcardMedia.$inferSelect;
+export type NewFlashcardMedia = typeof schema.flashcardMedia.$inferInsert;
 
 export type UserCardProgress = typeof schema.userCardProgress.$inferSelect;
 export type NewUserCardProgress = typeof schema.userCardProgress.$inferInsert;
@@ -56,6 +56,9 @@ export type NewSessionCard = typeof schema.sessionCards.$inferInsert;
 
 export type DeckProgress = typeof schema.deckProgress.$inferSelect;
 export type NewDeckProgress = typeof schema.deckProgress.$inferInsert;
+
+export type ClassProgress = typeof schema.classProgress.$inferSelect;
+export type NewClassProgress = typeof schema.classProgress.$inferInsert;
 
 export type UserStats = typeof schema.userStats.$inferSelect;
 export type NewUserStats = typeof schema.userStats.$inferInsert;

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { db } from '../src/lib/db';
-import { domains, topics, decks, flashcards } from '../src/lib/db/schema';
+import { classes, decks, flashcards } from '../src/lib/db/schema';
 
 /**
  * Seed script to populate CISSP domains, topics, decks, and sample flashcards
@@ -323,43 +323,39 @@ async function seed() {
     // Run: npx tsx scripts/create-admin.ts first
     const adminUserId = 'user_33oqZCsrKLsESLa3hoPcJpUHEFf';
 
-    console.log('📚 Seeding CISSP domains, topics, decks, and flashcards...\n');
+    console.log('📚 Seeding CISSP classes, decks, and flashcards...\n');
+    console.log('Note: Schema has been migrated to classes → decks (topics removed)\n');
 
     for (const domainData of CISSP_DOMAINS_DATA) {
-      console.log(`  Creating domain: ${domainData.name}`);
+      console.log(`  Creating class: ${domainData.name}`);
 
-      // Insert domain
-      const [domain] = await db.insert(domains).values({
+      // Insert class (formerly domain)
+      const [classItem] = await db.insert(classes).values({
         name: domainData.name,
         description: domainData.description,
         order: domainData.order,
         icon: domainData.icon,
+        color: domainData.color || 'purple',
+        isPublished: true,
         createdBy: adminUserId,
       }).returning();
 
-      // Insert topics
+      // Flatten topics into decks (no topics table anymore)
       for (const topicData of domainData.topics) {
-        console.log(`    Creating topic: ${topicData.name}`);
+        console.log(`    Processing topic: ${topicData.name}`);
 
-        const [topic] = await db.insert(topics).values({
-          domainId: domain.id,
-          name: topicData.name,
-          description: topicData.description,
-          order: topicData.order,
-          createdBy: adminUserId,
-        }).returning();
-
-        // Insert decks
+        // Insert decks directly under class
         for (const deckData of topicData.decks) {
           console.log(`      Creating deck: ${deckData.name}`);
 
           const [deck] = await db.insert(decks).values({
-            topicId: topic.id,
-            name: deckData.name,
+            classId: classItem.id,
+            name: `${topicData.name} - ${deckData.name}`,
             description: deckData.description,
             order: deckData.order,
             isPremium: deckData.isPremium,
             cardCount: deckData.flashcards.length,
+            isPublished: true,
             createdBy: adminUserId,
           }).returning();
 
@@ -370,7 +366,6 @@ async function seed() {
               question: flashcardData.question,
               answer: flashcardData.answer,
               explanation: flashcardData.explanation,
-              difficulty: flashcardData.difficulty,
               order: flashcardData.order,
               isPublished: true,
               createdBy: adminUserId,
@@ -381,13 +376,12 @@ async function seed() {
         }
       }
 
-      console.log(`  ✓ Domain "${domainData.name}" completed\n`);
+      console.log(`  ✓ Class "${domainData.name}" completed\n`);
     }
 
     console.log('✅ Seed completed successfully!\n');
     console.log('📊 Summary:');
-    console.log(`  - Domains: ${CISSP_DOMAINS_DATA.length}`);
-    console.log(`  - Topics: ${CISSP_DOMAINS_DATA.reduce((sum, d) => sum + d.topics.length, 0)}`);
+    console.log(`  - Classes: ${CISSP_DOMAINS_DATA.length}`);
     console.log(`  - Decks: ${CISSP_DOMAINS_DATA.reduce((sum, d) => sum + d.topics.reduce((s, t) => s + t.decks.length, 0), 0)}`);
     console.log(`  - Flashcards: ${CISSP_DOMAINS_DATA.reduce((sum, d) => sum + d.topics.reduce((s, t) => s + t.decks.reduce((c, deck) => c + deck.flashcards.length, 0), 0), 0)}`);
 

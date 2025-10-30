@@ -100,34 +100,30 @@ async function getUserAnalytics(userId: string, domainId: string | null) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  // Get all domains
-  const allDomains = await db.query.domains.findMany({
+  // Get all classes
+  const allClasses = await db.query.classes.findMany({
     with: {
-      topics: {
+      decks: {
         with: {
-          decks: {
-            with: {
-              flashcards: {
-                where: eq(flashcards.isPublished, true),
-              },
-            },
+          flashcards: {
+            where: eq(flashcards.isPublished, true),
           },
         },
       },
     },
   });
 
-  // Calculate progress per domain
-  const domainProgress = await Promise.all(
-    allDomains.map(async (domain) => {
-      const flashcardIds = domain.topics.flatMap((topic) =>
-        topic.decks.flatMap((deck) => deck.flashcards.map((card) => card.id))
+  // Calculate progress per class
+  const classProgress = await Promise.all(
+    allClasses.map(async (classItem) => {
+      const flashcardIds = classItem.decks.flatMap((deck) =>
+        deck.flashcards.map((card) => card.id)
       );
 
       if (flashcardIds.length === 0) {
         return {
-          domainId: domain.id,
-          domainName: domain.name,
+          domainId: classItem.id,
+          domainName: classItem.name,
           totalCards: 0,
           studiedCards: 0,
           masteredCards: 0,
@@ -153,8 +149,8 @@ async function getUserAnalytics(userId: string, domainId: string | null) {
       const newCardsCount = progressRecords.filter((p) => p.masteryStatus === 'new').length;
 
       return {
-        domainId: domain.id,
-        domainName: domain.name,
+        domainId: classItem.id,
+        domainName: classItem.name,
         totalCards: flashcardIds.length,
         studiedCards,
         masteredCards,
@@ -165,13 +161,13 @@ async function getUserAnalytics(userId: string, domainId: string | null) {
     })
   );
 
-  // If specific domain requested, get card-level details
+  // If specific class requested, get card-level details
   let cardDetails = null;
   if (domainId) {
-    const domain = allDomains.find((d) => d.id === domainId);
-    if (domain) {
-      const flashcardIds = domain.topics.flatMap((topic) =>
-        topic.decks.flatMap((deck) => deck.flashcards.map((card) => card.id))
+    const classItem = allClasses.find((d) => d.id === domainId);
+    if (classItem) {
+      const flashcardIds = classItem.decks.flatMap((deck) =>
+        deck.flashcards.map((card) => card.id)
       );
 
       if (flashcardIds.length > 0) {
@@ -202,7 +198,7 @@ async function getUserAnalytics(userId: string, domainId: string | null) {
       createdAt: user.createdAt,
     },
     stats: user.stats,
-    domainProgress,
+    domainProgress: classProgress,
     cardDetails,
   });
 }

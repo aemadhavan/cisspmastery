@@ -18,7 +18,7 @@ export async function PATCH(
     const { id } = await params;
 
     const body = await request.json();
-    const { question, answer, explanation, difficulty, order, isPublished, media } = body;
+    const { question, answer, explanation, order, isPublished, media } = body;
 
     // Check if flashcard exists with media
     const existingCard = await db.query.flashcards.findFirst({
@@ -35,13 +35,12 @@ export async function PATCH(
     }
 
     // Update flashcard
-    const [updatedCard] = await db
+    await db
       .update(flashcards)
       .set({
         question: question !== undefined ? question : existingCard.question,
         answer: answer !== undefined ? answer : existingCard.answer,
         explanation: explanation !== undefined ? explanation : existingCard.explanation,
-        difficulty: difficulty !== undefined ? difficulty : existingCard.difficulty,
         order: order !== undefined ? order : existingCard.order,
         isPublished: isPublished !== undefined ? isPublished : existingCard.isPublished,
         updatedAt: new Date(),

@@ -3,21 +3,24 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
-import { domains, userCardProgress, flashcards, topics, decks } from "@/lib/db/schema";
+import { classes, userCardProgress, flashcards, decks } from "@/lib/db/schema";
 import { eq, and, sql, asc, inArray } from "drizzle-orm";
 
-const DOMAIN_COLORS = [
-  "bg-blue-500",
-  "bg-green-500",
-  "bg-purple-500",
-  "bg-orange-500",
-  "bg-pink-500",
-  "bg-yellow-500",
-  "bg-red-500",
-  "bg-indigo-500"
-];
+const getColorClass = (color: string | null) => {
+  const colorMap: { [key: string]: string } = {
+    purple: "bg-purple-500",
+    blue: "bg-blue-500",
+    green: "bg-green-500",
+    red: "bg-red-500",
+    orange: "bg-orange-500",
+    yellow: "bg-yellow-500",
+    pink: "bg-pink-500",
+    indigo: "bg-indigo-500",
+    teal: "bg-teal-500",
+  };
+  return colorMap[color || "purple"] || "bg-purple-500";
+};
 
 export default async function DashboardPage() {
   const { userId, has } = await auth();
@@ -28,36 +31,34 @@ export default async function DashboardPage() {
 
   const hasPaidPlan = has({ plan: 'paid' });
 
-  // Fetch all domains with their flashcard counts
-  const allDomains = await db.query.domains.findMany({
-    orderBy: [asc(domains.order)],
+  // Fetch all classes with their decks and flashcards
+  const allClasses = await db.query.classes.findMany({
+    where: eq(classes.isPublished, true),
+    orderBy: [asc(classes.order)],
     with: {
-      topics: {
-        orderBy: [asc(topics.order)],
+      decks: {
+        where: eq(decks.isPublished, true),
+        orderBy: [asc(decks.order)],
         with: {
-          decks: {
-            orderBy: [asc(decks.order)],
-            with: {
-              flashcards: {
-                where: eq(flashcards.isPublished, true),
-              },
-            },
+          flashcards: {
+            where: eq(flashcards.isPublished, true),
           },
         },
       },
     },
   });
 
-  // Calculate total flashcard count and progress for each domain
-  const domainsWithProgress = await Promise.all(
-    allDomains.map(async (domain) => {
-      const flashcardIds = domain.topics.flatMap((topic) =>
-        topic.decks.flatMap((deck) => deck.flashcards.map((card) => card.id))
+  // Calculate total flashcard count and progress for each class
+  const classesWithProgress = await Promise.all(
+    allClasses.map(async (cls) => {
+      const flashcardIds = cls.decks.flatMap((deck) =>
+        deck.flashcards.map((card) => card.id)
       );
 
       const totalCards = flashcardIds.length;
+      const deckCount = cls.decks.length;
 
-      // Get user's progress for this domain
+      // Get user's progress for this class
       let progress = 0;
       if (totalCards > 0 && flashcardIds.length > 0) {
         const progressRecords = await db
@@ -74,18 +75,20 @@ export default async function DashboardPage() {
       }
 
       return {
-        id: domain.id,
-        order: domain.order,
-        name: domain.name,
-        description: domain.description,
+        id: cls.id,
+        order: cls.order,
+        name: cls.name,
+        description: cls.description,
+        icon: cls.icon,
+        color: cls.color,
         cardCount: totalCards,
-        color: DOMAIN_COLORS[domain.order - 1] || "bg-blue-500",
+        deckCount,
         progress,
       };
     })
   );
 
-  const totalCards = domainsWithProgress.reduce((sum, domain) => sum + domain.cardCount, 0);
+  const totalCards = classesWithProgress.reduce((sum, cls) => sum + cls.cardCount, 0);
 
   // Get user's overall studied cards count
   const [studiedCardsResult] = await db
@@ -105,7 +108,7 @@ export default async function DashboardPage() {
             CISSP Mastery Dashboard
           </h1>
           <p className="text-gray-300">
-            Master all 8 domains with confidence-based learning
+            Master CISSP concepts with confidence-based learning
           </p>
         </div>
 
@@ -118,7 +121,7 @@ export default async function DashboardPage() {
                   Unlock Full Access
                 </h3>
                 <p className="text-purple-100">
-                  Get unlimited access to 1000+ flashcards and advanced features
+                  Get unlimited access to all flashcards and advanced features
                 </p>
               </div>
               <Link
@@ -144,7 +147,7 @@ export default async function DashboardPage() {
                 {hasPaidPlan ? totalCards : '10'}
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                Across 8 domains
+                Across {classesWithProgress.length} classes
               </p>
             </CardContent>
           </Card>
@@ -176,48 +179,50 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        {/* CISSP Domains */}
+        {/* CISSP Classes */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white mb-4">
-            Study by Domain
+            Study by Class
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {domainsWithProgress.map((domain) => (
+            {classesWithProgress.map((cls) => (
               <Link
-                key={domain.id}
-                href={`/dashboard/domain/${domain.id}`}
+                key={cls.id}
+                href={`/dashboard/class/${cls.id}`}
                 className="group"
               >
                 <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all hover:border-purple-500">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className={`w-3 h-3 rounded-full ${domain.color}`}></div>
-                          <Badge variant="secondary" className="text-xs">
-                            Domain {domain.order}
-                          </Badge>
+                        <div className="flex items-center gap-3 mb-2">
+                          {cls.icon && (
+                            <span className="text-2xl">{cls.icon}</span>
+                          )}
+                          <div className={`w-3 h-3 rounded-full ${getColorClass(cls.color)}`}></div>
                         </div>
                         <CardTitle className="text-lg text-white group-hover:text-purple-400 transition-colors">
-                          {domain.name}
+                          {cls.name}
                         </CardTitle>
                       </div>
                     </div>
-                    <CardDescription className="text-gray-400 text-sm mt-2">
-                      {domain.description}
-                    </CardDescription>
+                    {cls.description && (
+                      <CardDescription className="text-gray-400 text-sm mt-2">
+                        {cls.description}
+                      </CardDescription>
+                    )}
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-3">
                       <span className="text-sm text-gray-400">
-                        {hasPaidPlan ? domain.cardCount : '10'} cards
+                        {cls.deckCount} deck{cls.deckCount !== 1 ? 's' : ''} • {hasPaidPlan ? cls.cardCount : '10'} cards
                       </span>
-                      <div className="flex items-center gap-2">
-                        <Progress value={domain.progress} className="w-20" />
-                        <span className="text-sm text-gray-400">
-                          {domain.progress}%
-                        </span>
-                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Progress value={cls.progress} className="flex-1" />
+                      <span className="text-sm text-gray-400 font-medium">
+                        {cls.progress}%
+                      </span>
                     </div>
                   </CardContent>
                 </Card>

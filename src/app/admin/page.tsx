@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { users, domains, flashcards, userCardProgress } from "@/lib/db/schema";
+import { users, classes, flashcards, userCardProgress } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users as UsersIcon, BookOpen, TrendingUp } from "lucide-react";
@@ -9,16 +9,16 @@ export default async function AdminDashboardPage() {
   const [stats] = await Promise.all([
     Promise.all([
       db.select({ count: sql<number>`count(*)::int` }).from(users),
-      db.select({ count: sql<number>`count(*)::int` }).from(domains),
+      db.select({ count: sql<number>`count(*)::int` }).from(classes),
       db.select({ count: sql<number>`count(*)::int` }).from(flashcards),
       db.select({ count: sql<number>`count(*)::int` }).from(userCardProgress),
     ])
   ]);
 
-  const [userCount, domainCount, flashcardCount, progressCount] = stats;
+  const [userCount, classCount, flashcardCount, progressCount] = stats;
 
   const totalUsers = userCount[0]?.count || 0;
-  const totalDomains = domainCount[0]?.count || 0;
+  const totalClasses = classCount[0]?.count || 0;
   const totalFlashcards = flashcardCount[0]?.count || 0;
   const totalProgress = progressCount[0]?.count || 0;
 
@@ -63,15 +63,15 @@ export default async function AdminDashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-gray-400">
-                Domains
+                Classes
               </CardTitle>
               <BookOpen className="w-4 h-4 text-green-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">{totalDomains}</div>
+            <div className="text-3xl font-bold text-white">{totalClasses}</div>
             <p className="text-xs text-gray-400 mt-1">
-              CISSP domains
+              Study classes
             </p>
           </CardContent>
         </Card>

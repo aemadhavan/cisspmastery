@@ -24,11 +24,7 @@ export async function GET(request: NextRequest) {
       with: {
         deck: {
           with: {
-            topic: {
-              with: {
-                domain: true,
-              },
-            },
+            class: true, // Changed from topic.domain to class
           },
         },
         media: {
@@ -80,7 +76,7 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin();
 
     const body = await request.json();
-    const { deckId, question, answer, explanation, difficulty, order, isPublished, media } = body;
+    const { deckId, question, answer, explanation, order, isPublished, media } = body;
 
     if (!deckId || !question || !answer) {
       return NextResponse.json(
@@ -116,7 +112,6 @@ export async function POST(request: NextRequest) {
         question,
         answer,
         explanation: explanation || null,
-        difficulty: difficulty || 3,
         order: cardOrder,
         isPublished: isPublished !== undefined ? isPublished : true,
         createdBy: admin.clerkUserId,

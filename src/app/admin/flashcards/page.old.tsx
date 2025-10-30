@@ -19,15 +19,22 @@ import { toast } from "sonner";
 import { MultiImageUpload, MediaFile } from "@/components/admin/MultiImageUpload";
 import { ImageLightbox } from "@/components/admin/ImageLightbox";
 
-// Updated interfaces for Class → Deck structure
-interface Class {
+interface Domain {
   id: string;
   name: string;
   description: string | null;
   order: number;
   icon: string | null;
-  color: string | null;
+  topics: Topic[];
+}
+
+interface Topic {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
   decks: Deck[];
+  domain?: Domain;
 }
 
 interface Deck {
@@ -37,8 +44,7 @@ interface Deck {
   cardCount: number;
   order: number;
   isPremium: boolean;
-  classId: string;
-  class?: Class;
+  topic?: Topic;
 }
 
 interface Flashcard {
@@ -47,6 +53,7 @@ interface Flashcard {
   question: string;
   answer: string;
   explanation?: string;
+  difficulty: number;
   order: number;
   isPublished: boolean;
   media?: MediaFile[];
@@ -60,9 +67,10 @@ export default function AdminFlashcardsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
 
-  // Class/Deck data (simplified from Domain/Topic/Deck)
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  // Domain/Topic/Deck data
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [selectedDomainId, setSelectedDomainId] = useState<string>("");
+  const [selectedTopicId, setSelectedTopicId] = useState<string>("");
 
   // Image state
   const [questionImages, setQuestionImages] = useState<MediaFile[]>([]);
@@ -84,25 +92,26 @@ export default function AdminFlashcardsPage() {
     orphanedCount: number;
   } | null>(null);
 
-  // Form state (removed difficulty field)
+  // Form state
   const [formData, setFormData] = useState({
     question: "",
     answer: "",
     explanation: "",
+    difficulty: 3,
     deckId: "",
   });
 
-  const loadClasses = async () => {
+  const loadDomains = async () => {
     try {
-      // Fetch all classes with full hierarchy from admin endpoint
-      const res = await fetch('/api/admin/classes');
-      if (!res.ok) throw new Error("Failed to load classes");
+      // Fetch all domains with full hierarchy from admin endpoint
+      const res = await fetch('/api/admin/domains');
+      if (!res.ok) throw new Error("Failed to load domains");
       const data = await res.json();
 
-      setClasses(data.classes || []);
+      setDomains(data.domains || []);
     } catch (error) {
-      console.error("Failed to load classes:", error);
-      toast.error("Failed to load classes");
+      console.error("Failed to load domains:", error);
+      toast.error("Failed to load domains");
     }
   };
 
@@ -123,9 +132,9 @@ export default function AdminFlashcardsPage() {
     }
   };
 
-  // Load classes and flashcards on page mount
+  // Load domains and flashcards on page mount
   useEffect(() => {
-    loadClasses();
+    loadDomains();
     loadFlashcards();
   }, []);
 
@@ -253,6 +262,7 @@ export default function AdminFlashcardsPage() {
       question: card.question,
       answer: card.answer,
       explanation: card.explanation || "",
+      difficulty: card.difficulty,
       deckId: card.deckId,
     });
 
@@ -264,16 +274,21 @@ export default function AdminFlashcardsPage() {
       setAnswerImages(answerMedia);
     }
 
-    // Set class based on the card's deck data
-    if (card.deck?.class) {
-      setSelectedClassId(card.deck.class.id);
+    // Set domain and topic based on the card's deck data
+    if (card.deck?.topic?.domain) {
+      // Use nested data from API if available
+      setSelectedDomainId(card.deck.topic.domain.id);
+      setSelectedTopicId(card.deck.topic.id);
     } else {
-      // Fallback: Find the class for the deck
-      for (const cls of classes) {
-        const deck = cls.decks.find(d => d.id === card.deckId);
-        if (deck) {
-          setSelectedClassId(cls.id);
-          break;
+      // Fallback: Find and set the domain and topic for the deck
+      for (const domain of domains) {
+        for (const topic of domain.topics) {
+          const deck = topic.decks.find(d => d.id === card.deckId);
+          if (deck) {
+            setSelectedDomainId(domain.id);
+            setSelectedTopicId(topic.id);
+            break;
+          }
         }
       }
     }
@@ -283,19 +298,27 @@ export default function AdminFlashcardsPage() {
 
   const resetForm = () => {
     setEditingCard(null);
-    setSelectedClassId("");
+    setSelectedDomainId("");
+    setSelectedTopicId("");
     setQuestionImages([]);
     setAnswerImages([]);
     setFormData({
       question: "",
       answer: "",
       explanation: "",
+      difficulty: 3,
       deckId: "",
     });
   };
 
-  const handleClassChange = (classId: string) => {
-    setSelectedClassId(classId);
+  const handleDomainChange = (domainId: string) => {
+    setSelectedDomainId(domainId);
+    setSelectedTopicId("");
+    setFormData({ ...formData, deckId: "" });
+  };
+
+  const handleTopicChange = (topicId: string) => {
+    setSelectedTopicId(topicId);
     setFormData({ ...formData, deckId: "" });
   };
 
@@ -367,9 +390,11 @@ export default function AdminFlashcardsPage() {
     }
   };
 
-  // Get filtered decks based on class selection
-  const selectedClass = classes.find(c => c.id === selectedClassId);
-  const availableDecks = selectedClass?.decks || [];
+  // Get filtered topics and decks based on selections
+  const selectedDomain = domains.find(d => d.id === selectedDomainId);
+  const availableTopics = selectedDomain?.topics || [];
+  const selectedTopic = availableTopics.find(t => t.id === selectedTopicId);
+  const availableDecks = selectedTopic?.decks || [];
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -506,20 +531,41 @@ export default function AdminFlashcardsPage() {
               </DialogHeader>
 
               <div className="space-y-4 mt-4 pb-4">
-                {/* Class Selection */}
+                {/* Domain Selection */}
                 <div>
-                  <Label htmlFor="class">Class (Required)</Label>
+                  <Label htmlFor="domain">Domain (Required)</Label>
                   <Select
-                    value={selectedClassId}
-                    onValueChange={handleClassChange}
+                    value={selectedDomainId}
+                    onValueChange={handleDomainChange}
                   >
                     <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
-                      <SelectValue placeholder="Select a class..." />
+                      <SelectValue placeholder="Select a domain..." />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-800 border-slate-700">
-                      {classes.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id}>
-                          {cls.icon && `${cls.icon} `}{cls.name}
+                      {domains.map((domain) => (
+                        <SelectItem key={domain.id} value={domain.id}>
+                          {domain.icon && `${domain.icon} `}{domain.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Topic Selection */}
+                <div>
+                  <Label htmlFor="topic">Topic (Required)</Label>
+                  <Select
+                    value={selectedTopicId}
+                    onValueChange={handleTopicChange}
+                    disabled={!selectedDomainId}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                      <SelectValue placeholder={selectedDomainId ? "Select a topic..." : "Select domain first"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {availableTopics.map((topic) => (
+                        <SelectItem key={topic.id} value={topic.id}>
+                          {topic.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -532,10 +578,10 @@ export default function AdminFlashcardsPage() {
                   <Select
                     value={formData.deckId}
                     onValueChange={handleDeckChange}
-                    disabled={!selectedClassId}
+                    disabled={!selectedTopicId}
                   >
                     <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
-                      <SelectValue placeholder={selectedClassId ? "Select a deck..." : "Select class first"} />
+                      <SelectValue placeholder={selectedTopicId ? "Select a deck..." : "Select topic first"} />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-800 border-slate-700">
                       {availableDecks.map((deck) => (
@@ -560,7 +606,7 @@ export default function AdminFlashcardsPage() {
                   {/* Question Images */}
                   <div className="mt-3">
                     <Label className="text-sm text-gray-400 mb-2 block">
-                      Question Images (Optional - Max 5)
+                      Question Images (Optional)
                     </Label>
                     <MultiImageUpload
                       placement="question"
@@ -584,7 +630,7 @@ export default function AdminFlashcardsPage() {
                   {/* Answer Images */}
                   <div className="mt-3">
                     <Label className="text-sm text-gray-400 mb-2 block">
-                      Answer Images (Optional - Max 5)
+                      Answer Images (Optional)
                     </Label>
                     <MultiImageUpload
                       placement="answer"
@@ -604,6 +650,25 @@ export default function AdminFlashcardsPage() {
                     onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
                     className="bg-slate-900 border-slate-700 text-white"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="difficulty">Difficulty (1-5)</Label>
+                  <Select
+                    value={formData.difficulty.toString()}
+                    onValueChange={(value) => setFormData({ ...formData, difficulty: parseInt(value) })}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <SelectItem key={level} value={level.toString()}>
+                          Level {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex justify-end gap-2 mt-6">
@@ -660,13 +725,17 @@ export default function AdminFlashcardsPage() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      {/* Show Class/Deck info if available */}
+                      {/* Show Domain/Topic/Deck info if available */}
                       {card.deck && (
                         <div className="mb-2 flex flex-wrap gap-2">
-                          {card.deck.class && (
+                          {card.deck.topic?.domain && (
                             <Badge variant="outline" className="text-xs text-blue-400 border-blue-400">
-                              {card.deck.class.icon && `${card.deck.class.icon} `}
-                              {card.deck.class.name}
+                              {card.deck.topic.domain.name}
+                            </Badge>
+                          )}
+                          {card.deck.topic && (
+                            <Badge variant="outline" className="text-xs text-purple-400 border-purple-400">
+                              {card.deck.topic.name}
                             </Badge>
                           )}
                           <Badge variant="outline" className="text-xs text-green-400 border-green-400">
@@ -751,6 +820,9 @@ export default function AdminFlashcardsPage() {
                         </div>
                       )}
                       <div className="flex items-center gap-4 mt-2">
+                        <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded">
+                          Difficulty: {card.difficulty}
+                        </span>
                         <span className={`text-xs px-2 py-1 rounded ${
                           card.isPublished
                             ? 'bg-green-500/20 text-green-400'

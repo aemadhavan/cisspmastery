@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { domains, topics, decks, flashcards, flashcardMedia } from '@/lib/db/schema';
+import { classes, decks, flashcards, flashcardMedia } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 
 /**
  * GET /api/domains/[domainId]/flashcards
- * Fetch all flashcards for a specific domain
+ * Fetch all flashcards for a specific class (formerly domain)
+ * Note: This endpoint maintains backward compatibility by using the old "domains" naming
  */
 export async function GET(
   _request: NextRequest,
@@ -20,25 +21,20 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch domain with all its flashcards
-    const domain = await db.query.domains.findFirst({
-      where: eq(domains.id, domainId),
+    // Fetch class with all its flashcards
+    const classItem = await db.query.classes.findFirst({
+      where: eq(classes.id, domainId),
       with: {
-        topics: {
-          orderBy: [asc(topics.order)],
+        decks: {
+          orderBy: [asc(decks.order)],
+          where: eq(decks.isPremium, false), // TODO: Check user subscription for premium access
           with: {
-            decks: {
-              orderBy: [asc(decks.order)],
-              where: eq(decks.isPremium, false), // TODO: Check user subscription for premium access
+            flashcards: {
+              orderBy: [asc(flashcards.order)],
+              where: eq(flashcards.isPublished, true),
               with: {
-                flashcards: {
-                  orderBy: [asc(flashcards.order)],
-                  where: eq(flashcards.isPublished, true),
-                  with: {
-                    media: {
-                      orderBy: [asc(flashcardMedia.order)],
-                    },
-                  },
+                media: {
+                  orderBy: [asc(flashcardMedia.order)],
                 },
               },
             },
@@ -47,38 +43,34 @@ export async function GET(
       },
     });
 
-    if (!domain) {
+    if (!classItem) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
-    // Flatten all flashcards from all topics and decks
-    const allFlashcards = domain.topics.flatMap((topic) =>
-      topic.decks.flatMap((deck) =>
-        deck.flashcards.map((card) => ({
-          id: card.id,
-          question: card.question,
-          answer: card.answer,
-          explanation: card.explanation,
-          difficulty: card.difficulty,
-          deckId: deck.id,
-          deckName: deck.name,
-          topicName: topic.name,
-          media: card.media.map((m) => ({
-            id: m.id,
-            url: m.fileUrl,
-            altText: m.altText,
-            placement: m.placement,
-            order: m.order,
-          })),
-        }))
-      )
+    // Flatten all flashcards from all decks
+    const allFlashcards = classItem.decks.flatMap((deck) =>
+      deck.flashcards.map((card) => ({
+        id: card.id,
+        question: card.question,
+        answer: card.answer,
+        explanation: card.explanation,
+        deckId: deck.id,
+        deckName: deck.name,
+        media: card.media.map((m) => ({
+          id: m.id,
+          url: m.fileUrl,
+          altText: m.altText,
+          placement: m.placement,
+          order: m.order,
+        })),
+      }))
     );
 
     return NextResponse.json({
       domain: {
-        id: domain.id,
-        name: domain.name,
-        description: domain.description,
+        id: classItem.id,
+        name: classItem.name,
+        description: classItem.description,
       },
       flashcards: allFlashcards,
       totalCards: allFlashcards.length,
