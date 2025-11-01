@@ -5,8 +5,9 @@ import { classes, decks, flashcards, userCardProgress } from '@/lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 /**
- * GET /api/classes/[id]/study?mode=progressive|random|all
+ * GET /api/classes/[id]/study?mode=progressive|random|all&decks=deck1,deck2
  * Get flashcards for studying a class based on the selected mode
+ * Optional: Filter by specific deck IDs (comma-separated)
  */
 export async function GET(
   request: NextRequest,
@@ -22,6 +23,8 @@ export async function GET(
     const { id: classId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const mode = searchParams.get('mode') || 'progressive';
+    const decksParam = searchParams.get('decks'); // Comma-separated deck IDs
+    const selectedDeckIds = decksParam ? decksParam.split(',') : null;
 
     // Verify class exists
     const classData = await db.query.classes.findFirst({
@@ -32,12 +35,20 @@ export async function GET(
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
     }
 
-    // Get all decks in this class
+    // Build deck query conditions
+    const deckConditions = [
+      eq(decks.classId, classId),
+      eq(decks.isPublished, true)
+    ];
+
+    // If specific decks are selected, filter by those IDs
+    if (selectedDeckIds && selectedDeckIds.length > 0) {
+      deckConditions.push(inArray(decks.id, selectedDeckIds));
+    }
+
+    // Get decks (all or filtered by selection)
     const classDecks = await db.query.decks.findMany({
-      where: and(
-        eq(decks.classId, classId),
-        eq(decks.isPublished, true)
-      ),
+      where: and(...deckConditions),
       with: {
         flashcards: {
           where: eq(flashcards.isPublished, true),

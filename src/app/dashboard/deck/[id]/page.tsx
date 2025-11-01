@@ -127,9 +127,12 @@ export default function DeckStudyPage() {
   };
 
   const handleReset = () => {
+    console.log('Reset Progress clicked - Before:', { currentIndex, studiedCardsSize: studiedCards.size });
     setCurrentIndex(0);
     setStudiedCards(new Set());
     setShowRating(false);
+    toast.success("Progress reset! Starting from card 1");
+    console.log('Reset Progress clicked - After: currentIndex set to 0, studiedCards cleared');
   };
 
   if (loading) {

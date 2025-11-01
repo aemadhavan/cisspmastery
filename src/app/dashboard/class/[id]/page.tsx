@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Play, Share2, MoreHorizontal, Pencil, Info, Plus, FileUp, Check } from "lucide-react";
+import { ArrowLeft, Play, Pencil, Info, Plus, FileUp, Check } from "lucide-react";
 
 type Deck = {
   id: string;
@@ -50,6 +50,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [classId, setClassId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedDecks, setSelectedDecks] = useState<Set<string>>(new Set());
 
   // Unwrap params
   useEffect(() => {
@@ -117,6 +118,28 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const totalStudied = decks.reduce((sum, deck) => sum + deck.studiedCount, 0);
   const overallProgress = totalCards > 0 ? Math.round((totalStudied / totalCards) * 100) : 0;
 
+  // Handle deck selection toggle
+  const toggleDeckSelection = (deckId: string) => {
+    setSelectedDecks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(deckId)) {
+        newSet.delete(deckId);
+      } else {
+        newSet.add(deckId);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle select all decks
+  const toggleSelectAll = () => {
+    if (selectedDecks.size === decks.length) {
+      setSelectedDecks(new Set());
+    } else {
+      setSelectedDecks(new Set(decks.map(d => d.id)));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200">
@@ -157,63 +180,40 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                     )}
                   </div>
 
-                  {/* Author Info */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-slate-600 text-sm">By:</span>
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                      {user?.imageUrl ? (
-                        <Image
-                          src={user.imageUrl}
-                          alt={user.fullName || "User"}
-                          width={24}
-                          height={24}
-                          className="rounded-full"
-                        />
-                      ) : (
-                        <span className="text-xs text-white">
-                          {user?.firstName?.charAt(0)}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-slate-800 text-sm font-medium">
-                      {user?.fullName || "Unknown"}
-                    </span>
-                  </div>
-
                   {/* Cards Studied Info */}
                   <div className="flex items-center gap-2 text-slate-600 text-sm">
                     <span>
                       Cards Studied: <span className="font-semibold">{totalStudied} of {totalCards}</span>
                     </span>
-                    <button className="hover:bg-slate-100 rounded p-0.5">
-                      <Info className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex items-center gap-3">
-                <Link href={`/dashboard/class/${classData.id}/study?mode=${studyMode}`}>
+                <Link
+                  href={
+                    selectedDecks.size > 0
+                      ? `/dashboard/class/${classData.id}/study?mode=${studyMode}&decks=${Array.from(selectedDecks).join(',')}`
+                      : `/dashboard/class/${classData.id}/study?mode=${studyMode}`
+                  }
+                >
                   <Button
                     size="lg"
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-8 rounded-full"
+                    className={`text-white px-8 rounded-full transition-all ${
+                      selectedDecks.size > 0
+                        ? 'bg-green-500 hover:bg-green-600'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
+                    disabled={selectedDecks.size === 0 && decks.length === 0}
                   >
                     <Play className="w-5 h-5 mr-2 fill-white" />
-                    STUDY
+                    {selectedDecks.size > 0
+                      ? `STUDY SELECTED (${selectedDecks.size})`
+                      : 'STUDY'
+                    }
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full border-slate-300"
-                >
-                  <Share2 className="w-5 h-5 mr-2" />
-                  SHARE
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <MoreHorizontal className="w-5 h-5" />
-                </Button>
               </div>
             </div>
 
@@ -242,11 +242,8 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="text-sm text-slate-600 mb-1 flex items-center gap-1">
+                  <div className="text-sm text-slate-600 mb-1">
                     Mastery
-                    <button className="hover:bg-slate-100 rounded p-0.5">
-                      <Info className="w-3 h-3" />
-                    </button>
                   </div>
                   <div className="text-4xl font-bold text-slate-800">
                     {overallProgress}.0%
@@ -324,15 +321,19 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
               {/* Study Mode Buttons */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setStudyMode("all")}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    studyMode === "all"
-                      ? "bg-slate-200 text-slate-800"
-                      : "bg-white text-slate-600 hover:bg-slate-50"
-                  } border border-slate-300 flex items-center gap-2`}
+                  onClick={toggleSelectAll}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors border ${
+                    selectedDecks.size === decks.length && decks.length > 0
+                      ? "bg-blue-500 border-blue-500"
+                      : "bg-white border-slate-300 hover:bg-slate-50"
+                  }`}
+                  title="Select All"
                 >
-                  {studyMode === "all" && <Check className="w-4 h-4" />}
-                  All
+                  <Check className={`w-5 h-5 ${
+                    selectedDecks.size === decks.length && decks.length > 0
+                      ? "text-white"
+                      : "text-slate-600"
+                  }`} />
                 </button>
                 <button
                   onClick={() => setStudyMode("progressive")}
@@ -422,58 +423,72 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
               </Card>
             ) : (
               <div className="space-y-4">
-                {decks.map((deck) => (
-                  <Card
-                    key={deck.id}
-                    className="hover:shadow-md transition-shadow border-slate-200"
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-4">
-                        {/* Checkmark */}
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                            <Check className="w-6 h-6 text-slate-600" />
+                {decks.map((deck) => {
+                  const isSelected = selectedDecks.has(deck.id);
+                  return (
+                    <Card
+                      key={deck.id}
+                      onClick={() => toggleDeckSelection(deck.id)}
+                      className={`cursor-pointer transition-all border-2 ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-slate-200 hover:shadow-md'
+                      }`}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-4">
+                          {/* Selection Checkbox */}
+                          <div className="flex-shrink-0">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                              isSelected
+                                ? 'bg-blue-500'
+                                : 'bg-slate-200'
+                            }`}>
+                              <Check className={`w-6 h-6 ${
+                                isSelected ? 'text-white' : 'text-slate-600'
+                              }`} />
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Progress Indicator */}
-                        <div className="flex-shrink-0">
-                          <div className="text-2xl font-bold text-slate-800">
-                            {deck.progress}%
+                          {/* Progress Indicator */}
+                          <div className="flex-shrink-0">
+                            <div className="text-2xl font-bold text-slate-800">
+                              {deck.progress}%
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Deck Info */}
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-slate-800 mb-1">
-                            {deck.name}
-                          </h3>
-                          <p className="text-sm text-slate-600">
-                            {deck.studiedCount} of {deck.cardCount} unique cards studied
-                          </p>
-                          <div className="mt-3">
-                            <Progress value={deck.progress} className="h-2" />
+                          {/* Deck Info */}
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-slate-800 mb-1">
+                              {deck.name}
+                            </h3>
+                            <p className="text-sm text-slate-600">
+                              {deck.studiedCount} of {deck.cardCount} unique cards studied
+                            </p>
+                            <div className="mt-3">
+                              <Progress value={deck.progress} className="h-2" />
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="w-5 h-5 text-slate-600" />
-                          </Button>
-                          <Link href={`/dashboard/deck/${deck.id}?mode=${studyMode}`}>
-                            <Button
-                              size="icon"
-                              className="bg-blue-500 hover:bg-blue-600 rounded-full w-12 h-12"
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Link
+                              href={`/dashboard/deck/${deck.id}?mode=${studyMode}`}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <Play className="w-6 h-6 fill-white text-white" />
-                            </Button>
-                          </Link>
+                              <Button
+                                size="icon"
+                                className="bg-blue-500 hover:bg-blue-600 rounded-full w-12 h-12"
+                              >
+                                <Play className="w-6 h-6 fill-white text-white" />
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
 

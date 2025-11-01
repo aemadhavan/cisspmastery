@@ -34,6 +34,7 @@ export default function ClassStudyPage() {
   const router = useRouter();
   const classId = params.id as string;
   const mode = searchParams.get('mode') || 'progressive';
+  const selectedDecks = searchParams.get('decks'); // Comma-separated deck IDs
 
   const [flashcards, setFlashcards] = useState<FlashcardData[]>([]);
   const [className, setClassName] = useState<string>("");
@@ -50,12 +51,15 @@ export default function ClassStudyPage() {
   useEffect(() => {
     loadFlashcards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, mode]);
+  }, [classId, mode, selectedDecks]);
 
   const loadFlashcards = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/classes/${classId}/study?mode=${mode}`);
+      const url = selectedDecks
+        ? `/api/classes/${classId}/study?mode=${mode}&decks=${selectedDecks}`
+        : `/api/classes/${classId}/study?mode=${mode}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to load flashcards");
 
       const data = await res.json();
@@ -113,9 +117,12 @@ export default function ClassStudyPage() {
   };
 
   const handleReset = () => {
+    console.log('Reset Progress clicked - Before:', { currentIndex, studiedCardsSize: studiedCards.size });
     setCurrentIndex(0);
     setStudiedCards(new Set());
     setShowRating(false);
+    toast.success("Progress reset! Starting from card 1");
+    console.log('Reset Progress clicked - After: currentIndex set to 0, studiedCards cleared');
   };
 
   const getModeName = () => {
@@ -212,7 +219,7 @@ export default function ClassStudyPage() {
 
         {/* Flashcard or Completion */}
         {!allCardsStudied ? (
-          <div className="space-y-8">
+          <div className="pb-32">
             {/* Flashcard */}
             <Flashcard
               key={currentCard.id}
@@ -234,13 +241,6 @@ export default function ClassStudyPage() {
               }))}
               onFlip={handleFlip}
             />
-
-            {/* Confidence Rating */}
-            {showRating && (
-              <div className="animate-fade-in">
-                <ConfidenceRating onRate={handleRate} />
-              </div>
-            )}
           </div>
         ) : (
           <div className="max-w-2xl mx-auto text-center space-y-6">
@@ -282,6 +282,39 @@ export default function ClassStudyPage() {
           </div>
         )}
       </div>
+
+      {/* Fixed Bottom Rating Bar */}
+      {!allCardsStudied && showRating && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent backdrop-blur-lg border-t border-slate-700 py-6 px-4 z-50 animate-fade-in">
+          <div className="container mx-auto max-w-4xl">
+            <p className="text-center text-white text-lg font-semibold mb-4">
+              How well did you know this?
+            </p>
+            <p className="text-center text-gray-400 text-sm mb-6">
+              Be honest - this helps us optimize your learning
+            </p>
+            <div className="flex justify-center gap-2 sm:gap-4">
+              {[
+                { level: 1, color: 'bg-red-600 hover:bg-red-700', label: 'Not at all', subtext: "I don't know this" },
+                { level: 2, color: 'bg-orange-600 hover:bg-orange-700', label: 'Barely', subtext: 'I barely remember' },
+                { level: 3, color: 'bg-yellow-600 hover:bg-yellow-700', label: 'Somewhat', subtext: 'I sort of know this' },
+                { level: 4, color: 'bg-lime-600 hover:bg-lime-700', label: 'Mostly', subtext: 'I know this well' },
+                { level: 5, color: 'bg-green-600 hover:bg-green-700', label: 'Perfectly', subtext: 'I know this perfectly' },
+              ].map((option) => (
+                <button
+                  key={option.level}
+                  onClick={() => handleRate(option.level)}
+                  className={`${option.color} text-white px-4 py-6 sm:px-6 sm:py-8 rounded-xl flex flex-col items-center justify-center transition-all transform hover:scale-105 hover:shadow-2xl min-w-[80px] sm:min-w-[120px]`}
+                >
+                  <span className="text-3xl sm:text-4xl font-bold mb-2">{option.level}</span>
+                  <span className="text-xs sm:text-sm font-semibold">{option.label}</span>
+                  <span className="text-[10px] sm:text-xs opacity-80 mt-1 hidden sm:block">{option.subtext}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes fade-in {
