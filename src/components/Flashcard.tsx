@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
+import { X, ZoomIn } from "lucide-react";
 
 interface FlashcardMedia {
   id: string;
@@ -28,16 +29,38 @@ export default function Flashcard({
   onFlip
 }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<FlashcardMedia | null>(null);
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
     onFlip?.();
   };
 
+  const handleImageClick = (e: React.MouseEvent, img: FlashcardMedia) => {
+    e.stopPropagation(); // Prevent card flip when clicking image
+    setZoomedImage(img);
+  };
+
+  const closeZoom = () => {
+    setZoomedImage(null);
+  };
+
+  // Handle ESC key to close zoom
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && zoomedImage) {
+        closeZoom();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [zoomedImage]);
+
   return (
-    <div className="perspective-1000 w-full max-w-2xl mx-auto">
+    <div className="perspective-1000 w-full max-w-4xl mx-auto">
       <div
-        className={`relative w-full h-[500px] transition-transform duration-500 preserve-3d cursor-pointer ${
+        className={`relative w-full min-h-[500px] transition-transform duration-500 preserve-3d cursor-pointer ${
           isFlipped ? "rotate-y-180" : ""
         }`}
         onClick={handleFlip}
@@ -54,33 +77,54 @@ export default function Flashcard({
             WebkitBackfaceVisibility: "hidden"
           }}
         >
-          <CardContent className="flex flex-col items-center justify-center h-full p-8 overflow-hidden">
-            <div className="text-sm font-semibold text-purple-400 mb-4">
-              QUESTION
-            </div>
-            <p className="text-xl sm:text-2xl text-white text-center leading-relaxed">
-              {question}
-            </p>
-
-            {/* Question Images */}
-            {questionImages.length > 0 && (
-              <div className="mt-6 flex flex-col gap-4 w-full max-w-md">
-                {questionImages.map((img) => (
-                  <div key={img.id} className="relative w-full">
-                    <Image
-                      src={img.url}
-                      alt={img.altText || 'Question image'}
-                      width={500}
-                      height={300}
-                      className="rounded-lg border border-slate-600 object-contain w-full h-auto"
-                      unoptimized
-                    />
-                  </div>
-                ))}
+          <CardContent className="flex flex-col h-full p-8">
+            <div className="flex-shrink-0 text-center">
+              <div className="text-sm font-semibold text-purple-400 mb-4">
+                QUESTION
               </div>
-            )}
+            </div>
 
-            <div className="mt-8 text-sm text-gray-400">
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(500px - 120px)' }}>
+              <div className="flex flex-col items-center">
+                <p className="text-xl sm:text-2xl text-white text-center leading-relaxed mb-6">
+                  {question}
+                </p>
+
+                {/* Question Images - Grid layout for multiple images */}
+                {questionImages.length > 0 && (
+                  <div className={`w-full ${
+                    questionImages.length === 1
+                      ? 'max-w-xl'
+                      : questionImages.length === 2
+                      ? 'grid grid-cols-2 gap-4'
+                      : 'grid grid-cols-2 gap-4'
+                  }`}>
+                    {questionImages.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative w-full group cursor-zoom-in"
+                        onClick={(e) => handleImageClick(e, img)}
+                      >
+                        <Image
+                          src={img.url}
+                          alt={img.altText || 'Question image'}
+                          width={500}
+                          height={300}
+                          className="rounded-lg border border-slate-600 object-contain w-full h-auto max-h-64 transition-opacity group-hover:opacity-90"
+                          unoptimized
+                        />
+                        <div className="absolute top-2 right-2 bg-slate-900/70 text-white p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ZoomIn className="w-4 h-4" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 mt-4 text-center text-sm text-gray-400">
               Click to reveal answer
             </div>
           </CardContent>
@@ -95,38 +139,93 @@ export default function Flashcard({
             transform: "rotateY(180deg)"
           }}
         >
-          <CardContent className="flex flex-col items-center justify-center h-full p-8 overflow-hidden">
-            <div className="text-sm font-semibold text-purple-200 mb-4">
-              ANSWER
-            </div>
-            <p className="text-xl sm:text-2xl text-white text-center leading-relaxed">
-              {answer}
-            </p>
-
-            {/* Answer Images */}
-            {answerImages.length > 0 && (
-              <div className="mt-6 flex flex-col gap-4 w-full max-w-md">
-                {answerImages.map((img) => (
-                  <div key={img.id} className="relative w-full">
-                    <Image
-                      src={img.url}
-                      alt={img.altText || 'Answer image'}
-                      width={500}
-                      height={300}
-                      className="rounded-lg border border-purple-400 object-contain w-full h-auto"
-                      unoptimized
-                    />
-                  </div>
-                ))}
+          <CardContent className="flex flex-col h-full p-8">
+            <div className="flex-shrink-0 text-center">
+              <div className="text-sm font-semibold text-purple-200 mb-4">
+                ANSWER
               </div>
-            )}
+            </div>
 
-            <div className="mt-8 text-sm text-purple-200">
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(500px - 120px)' }}>
+              <div className="flex flex-col items-center">
+                <p className="text-xl sm:text-2xl text-white text-center leading-relaxed mb-6">
+                  {answer}
+                </p>
+
+                {/* Answer Images - Grid layout for multiple images */}
+                {answerImages.length > 0 && (
+                  <div className={`w-full ${
+                    answerImages.length === 1
+                      ? 'max-w-xl'
+                      : answerImages.length === 2
+                      ? 'grid grid-cols-2 gap-4'
+                      : 'grid grid-cols-2 gap-4'
+                  }`}>
+                    {answerImages.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative w-full group cursor-zoom-in"
+                        onClick={(e) => handleImageClick(e, img)}
+                      >
+                        <Image
+                          src={img.url}
+                          alt={img.altText || 'Answer image'}
+                          width={500}
+                          height={300}
+                          className="rounded-lg border border-purple-400 object-contain w-full h-auto max-h-64 transition-opacity group-hover:opacity-90"
+                          unoptimized
+                        />
+                        <div className="absolute top-2 right-2 bg-purple-900/70 text-white p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ZoomIn className="w-4 h-4" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 mt-4 text-center text-sm text-purple-200">
               Click to see question
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 animate-fade-in"
+          onClick={closeZoom}
+        >
+          <button
+            onClick={closeZoom}
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-colors z-10"
+            aria-label="Close zoom"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <Image
+              src={zoomedImage.url}
+              alt={zoomedImage.altText || 'Zoomed image'}
+              width={1920}
+              height={1080}
+              className="object-contain w-full h-full"
+              unoptimized
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          <div className="absolute bottom-4 left-0 right-0 text-center">
+            <p className="text-white/70 text-sm">
+              Click anywhere or press ESC to close
+            </p>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .perspective-1000 {
@@ -141,6 +240,17 @@ export default function Flashcard({
         }
         .rotate-y-180 {
           transform: rotateY(180deg);
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
         }
       `}</style>
     </div>

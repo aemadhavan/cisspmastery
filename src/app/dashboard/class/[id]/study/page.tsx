@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -28,22 +28,15 @@ interface FlashcardData {
   media: FlashcardMedia[];
 }
 
-interface DeckData {
-  id: string;
-  name: string;
-  description: string | null;
-  classId: string;
-  className: string;
-}
-
-export default function DeckStudyPage() {
+export default function ClassStudyPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const deckId = params.id as string;
-  const mode = searchParams.get('mode') || 'all';
+  const router = useRouter();
+  const classId = params.id as string;
+  const mode = searchParams.get('mode') || 'progressive';
 
   const [flashcards, setFlashcards] = useState<FlashcardData[]>([]);
-  const [deck, setDeck] = useState<DeckData | null>(null);
+  const [className, setClassName] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -57,28 +50,21 @@ export default function DeckStudyPage() {
   useEffect(() => {
     loadFlashcards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckId, mode]);
+  }, [classId, mode]);
 
   const loadFlashcards = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/decks/${deckId}/flashcards`);
+      const res = await fetch(`/api/classes/${classId}/study?mode=${mode}`);
       if (!res.ok) throw new Error("Failed to load flashcards");
 
       const data = await res.json();
-      setDeck(data.deck);
+      setClassName(data.className || "Unknown Class");
+      setFlashcards(data.flashcards || []);
 
-      let cards = data.flashcards || [];
-
-      // Apply study mode
-      if (mode === 'random') {
-        // Shuffle cards randomly
-        cards = [...cards].sort(() => Math.random() - 0.5);
+      if (data.flashcards.length === 0) {
+        toast.info("No cards available for this study mode");
       }
-      // 'all' and 'progressive' modes use default order for individual decks
-      // (progressive filtering is more relevant at class level with multiple decks)
-
-      setFlashcards(cards);
     } catch {
       toast.error("Failed to load flashcards");
     } finally {
@@ -132,6 +118,19 @@ export default function DeckStudyPage() {
     setShowRating(false);
   };
 
+  const getModeName = () => {
+    switch (mode) {
+      case 'progressive':
+        return 'Progressive';
+      case 'random':
+        return 'Random';
+      case 'all':
+        return 'All Cards';
+      default:
+        return mode;
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -148,15 +147,19 @@ export default function DeckStudyPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Link href="/dashboard">
+          <Link href={`/dashboard/class/${classId}`}>
             <Button variant="ghost" className="text-white mb-6">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              Back to {className}
             </Button>
           </Link>
           <div className="text-center text-white">
             <h1 className="text-2xl font-bold mb-4">No flashcards available</h1>
-            <p className="text-gray-400">This deck doesn&apos;t have any flashcards yet.</p>
+            <p className="text-gray-400">
+              {mode === 'progressive'
+                ? "Great job! You've mastered all cards. Try 'All' or 'Random' mode to review."
+                : "This class doesn't have any flashcards yet."}
+            </p>
           </div>
         </div>
       </div>
@@ -164,30 +167,13 @@ export default function DeckStudyPage() {
   }
 
   const allCardsStudied = studiedCards.size === flashcards.length;
-  const deckName = deck?.name || "Unknown Deck";
-  const className = deck?.className || "Unknown Class";
-
-  const getModeName = () => {
-    switch (mode) {
-      case 'progressive':
-        return 'Progressive';
-      case 'random':
-        return 'Random';
-      case 'all':
-      default:
-        return '';
-    }
-  };
-
-  const modeName = getModeName();
-  const displayTitle = modeName ? `${deckName} - ${modeName} Mode` : deckName;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link href={deck?.classId ? `/dashboard/class/${deck.classId}` : "/dashboard"}>
+          <Link href={`/dashboard/class/${classId}`}>
             <Button variant="ghost" className="text-white mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to {className}
@@ -198,7 +184,7 @@ export default function DeckStudyPage() {
             <div>
               <p className="text-sm text-purple-400 mb-1">{className}</p>
               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                {displayTitle}
+                {getModeName()} Mode
               </h1>
               <p className="text-gray-400">
                 Card {currentIndex + 1} of {flashcards.length}
@@ -263,7 +249,7 @@ export default function DeckStudyPage() {
               Great Job!
             </h2>
             <p className="text-xl text-gray-300">
-              You&apos;ve completed all {flashcards.length} cards in this deck.
+              You&apos;ve completed all {flashcards.length} cards in {getModeName()} mode.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -273,7 +259,7 @@ export default function DeckStudyPage() {
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Study Again
               </Button>
-              <Link href={deck?.classId ? `/dashboard/class/${deck.classId}` : "/dashboard"}>
+              <Link href={`/dashboard/class/${classId}`}>
                 <Button variant="outline" className="border-purple-500 text-purple-400 hover:bg-purple-500/10 w-full sm:w-auto">
                   Back to {className}
                 </Button>
@@ -286,10 +272,11 @@ export default function DeckStudyPage() {
         {!allCardsStudied && (
           <div className="mt-12 max-w-2xl mx-auto">
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-3">💡 Study Tip</h3>
+              <h3 className="text-lg font-semibold text-white mb-3">💡 Study Mode: {getModeName()}</h3>
               <p className="text-gray-300 text-sm">
-                Be honest with your confidence ratings. Cards you rate lower will appear more frequently
-                in your study sessions, helping you focus on areas that need more attention.
+                {mode === 'progressive' && "You're studying cards that need the most attention - those with low confidence or due for review."}
+                {mode === 'random' && "Cards are shuffled randomly to test your knowledge in an unpredictable order."}
+                {mode === 'all' && "You're studying all cards in this class in their default order."}
               </p>
             </div>
           </div>

@@ -97,7 +97,10 @@ export default async function DashboardPage() {
     .where(eq(userCardProgress.clerkUserId, userId));
 
   const studiedCards = studiedCardsResult?.count || 0;
-  const overallProgress = totalCards > 0 ? Math.round((studiedCards / totalCards) * 100) : 0;
+
+  // For free users, limit the total cards displayed and used in calculations
+  const displayTotalCards = hasPaidPlan ? totalCards : Math.min(totalCards, 10);
+  const overallProgress = displayTotalCards > 0 ? Math.round((studiedCards / displayTotalCards) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -144,7 +147,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-white">
-                {hasPaidPlan ? totalCards : '10'}
+                {displayTotalCards}
               </div>
               <p className="text-xs text-gray-400 mt-1">
                 Across {classesWithProgress.length} classes
@@ -215,7 +218,7 @@ export default async function DashboardPage() {
                   <CardContent>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm text-gray-400">
-                        {cls.deckCount} deck{cls.deckCount !== 1 ? 's' : ''} • {hasPaidPlan ? cls.cardCount : '10'} cards
+                        {cls.deckCount} deck{cls.deckCount !== 1 ? 's' : ''} • {hasPaidPlan ? cls.cardCount : Math.min(cls.cardCount, 10)} cards
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

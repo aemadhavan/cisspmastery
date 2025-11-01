@@ -8,6 +8,14 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ArrowLeft, Play, Share2, MoreHorizontal, Pencil, Info, Plus, FileUp, Check } from "lucide-react";
 
 type Deck = {
@@ -41,6 +49,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [studyMode, setStudyMode] = useState<StudyMode>("progressive");
   const [loading, setLoading] = useState(true);
   const [classId, setClassId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Unwrap params
   useEffect(() => {
@@ -77,6 +86,11 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
 
         // Set decks with progress (already calculated by API)
         setDecks(data.decks || []);
+
+        // Check if user is admin
+        const adminResponse = await fetch('/api/user/is-admin');
+        const adminData = await adminResponse.json();
+        setIsAdmin(adminData.isAdmin);
       } catch (error) {
         console.error("Error fetching class data:", error);
       } finally {
@@ -136,9 +150,11 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                     <h1 className="text-3xl font-bold text-slate-800">
                       {classData.name}
                     </h1>
-                    <button className="p-1 hover:bg-slate-100 rounded">
-                      <Pencil className="w-4 h-4 text-slate-500" />
-                    </button>
+                    {isAdmin && (
+                      <button className="p-1 hover:bg-slate-100 rounded">
+                        <Pencil className="w-4 h-4 text-slate-500" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Author Info */}
@@ -178,13 +194,15 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
 
               {/* Action Buttons */}
               <div className="flex items-center gap-3">
-                <Button
-                  size="lg"
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-8 rounded-full"
-                >
-                  <Play className="w-5 h-5 mr-2 fill-white" />
-                  STUDY
-                </Button>
+                <Link href={`/dashboard/class/${classData.id}/study?mode=${studyMode}`}>
+                  <Button
+                    size="lg"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-8 rounded-full"
+                  >
+                    <Play className="w-5 h-5 mr-2 fill-white" />
+                    STUDY
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   size="lg"
@@ -336,25 +354,61 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                 >
                   RANDOM
                 </button>
-                <button className="hover:bg-slate-100 rounded p-1">
-                  <Info className="w-4 h-4 text-slate-500" />
-                </button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <button className="hover:bg-slate-100 rounded p-1">
+                      <Info className="w-4 h-4 text-slate-500" />
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Study Modes</DialogTitle>
+                      <DialogDescription>
+                        Learn about the different study modes available.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                      <div>
+                        <h4 className="font-semibold text-slate-900 mb-1">📚 All</h4>
+                        <p className="text-sm text-slate-600">
+                          Study all cards in this class in their default order. Great for comprehensive review.
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 mb-1">🎯 Progressive (Recommended)</h4>
+                        <p className="text-sm text-slate-600">
+                          Focus on cards that need the most attention - those with low confidence ratings or due for review.
+                          This mode uses spaced repetition to optimize your learning.
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900 mb-1">🎲 Random</h4>
+                        <p className="text-sm text-slate-600">
+                          Cards are shuffled randomly to test your knowledge in an unpredictable order.
+                          Perfect for simulating exam conditions.
+                        </p>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-3">
-                <Button variant="outline" className="rounded-full border-slate-300">
-                  <FileUp className="w-4 h-4 mr-2" />
-                  Import/Make Flashcards
-                  <span className="ml-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    NEW
-                  </span>
-                </Button>
-                <Button variant="outline" className="rounded-full border-slate-300">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create New Deck
-                </Button>
-              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" className="rounded-full border-slate-300">
+                    <FileUp className="w-4 h-4 mr-2" />
+                    Import/Make Flashcards
+                    <span className="ml-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      NEW
+                    </span>
+                  </Button>
+                  <Button variant="outline" className="rounded-full border-slate-300">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create New Deck
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Deck List */}
@@ -407,7 +461,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="w-5 h-5 text-slate-600" />
                           </Button>
-                          <Link href={`/dashboard/deck/${deck.id}`}>
+                          <Link href={`/dashboard/deck/${deck.id}?mode=${studyMode}`}>
                             <Button
                               size="icon"
                               className="bg-blue-500 hover:bg-blue-600 rounded-full w-12 h-12"
@@ -424,16 +478,18 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
             )}
 
             {/* Create New Deck Card */}
-            <Card className="mt-4 border-dashed border-2 border-slate-300 hover:border-slate-400 cursor-pointer transition-colors">
-              <CardContent className="p-8">
-                <div className="flex items-center justify-center gap-3 text-slate-500">
-                  <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center">
-                    <Plus className="w-6 h-6" />
+            {isAdmin && (
+              <Card className="mt-4 border-dashed border-2 border-slate-300 hover:border-slate-400 cursor-pointer transition-colors">
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-center gap-3 text-slate-500">
+                    <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center">
+                      <Plus className="w-6 h-6" />
+                    </div>
+                    <span className="text-lg font-medium">Create New Deck</span>
                   </div>
-                  <span className="text-lg font-medium">Create New Deck</span>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 

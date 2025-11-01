@@ -17,7 +17,11 @@ export async function GET(
       where: eq(decks.id, id),
       with: {
         class: true,
-        flashcards: true,
+        flashcards: {
+          with: {
+            media: true,
+          },
+        },
       },
     });
 

@@ -57,6 +57,14 @@ interface FlashcardFormData {
   isPublished: boolean;
 }
 
+interface ImageUpload {
+  file: File | null; // null for existing images from database
+  preview: string;
+  placement: 'question' | 'answer';
+  order: number;
+  isExisting?: boolean; // true if loaded from database
+}
+
 type EditorMode = "simple" | "advanced" | "source";
 
 export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -79,6 +87,9 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
     isPublished: true,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [questionImages, setQuestionImages] = useState<ImageUpload[]>([]);
+  const [answerImages, setAnswerImages] = useState<ImageUpload[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // Unwrap params
   useEffect(() => {
@@ -128,6 +139,8 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
       order: flashcards.length,
       isPublished: true,
     });
+    setQuestionImages([]);
+    setAnswerImages([]);
     setActiveTab("edit");
     setIsDialogOpen(true);
   };
@@ -141,6 +154,38 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
       order: card.order,
       isPublished: card.isPublished,
     });
+
+    // Load existing images as previews
+    if (card.media && card.media.length > 0) {
+      const questionMedia: ImageUpload[] = card.media
+        .filter(m => m.placement === 'question')
+        .sort((a, b) => a.order - b.order)
+        .map(m => ({
+          file: null,
+          preview: m.fileUrl,
+          placement: 'question' as const,
+          order: m.order,
+          isExisting: true,
+        }));
+
+      const answerMedia: ImageUpload[] = card.media
+        .filter(m => m.placement === 'answer')
+        .sort((a, b) => a.order - b.order)
+        .map(m => ({
+          file: null,
+          preview: m.fileUrl,
+          placement: 'answer' as const,
+          order: m.order,
+          isExisting: true,
+        }));
+
+      setQuestionImages(questionMedia);
+      setAnswerImages(answerMedia);
+    } else {
+      setQuestionImages([]);
+      setAnswerImages([]);
+    }
+
     setActiveTab("edit");
     setIsDialogOpen(true);
   };
@@ -148,6 +193,50 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
   const openDeleteDialog = (card: Flashcard) => {
     setDeletingCard(card);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleImageSelect = (placement: 'question' | 'answer') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = async (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files || []);
+      if (files.length === 0) return;
+
+      const images = placement === 'question' ? questionImages : answerImages;
+      const setImages = placement === 'question' ? setQuestionImages : setAnswerImages;
+
+      const newImages: ImageUpload[] = files.map((file, index) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        placement,
+        order: images.length + index,
+      }));
+
+      setImages([...images, ...newImages]);
+    };
+    input.click();
+  };
+
+  const handleRemoveImage = async (placement: 'question' | 'answer', index: number) => {
+    const images = placement === 'question' ? questionImages : answerImages;
+    const setImages = placement === 'question' ? setQuestionImages : setAnswerImages;
+    const imageToRemove = images[index];
+
+    // If it's an existing image from database, we should delete it from storage
+    // For now, we'll just remove it from the UI. The API would need a delete endpoint.
+    // TODO: Implement DELETE /api/admin/media/:id endpoint to delete from blob and database
+
+    // Revoke the preview URL to free memory (only for new uploads, not existing URLs)
+    if (!imageToRemove.isExisting) {
+      URL.revokeObjectURL(images[index].preview);
+    }
+
+    const newImages = images.filter((_, i) => i !== index);
+    // Reorder remaining images
+    newImages.forEach((img, i) => { img.order = i; });
+    setImages(newImages);
   };
 
   const handleSaveCard = async () => {
@@ -160,6 +249,7 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
 
     setIsSaving(true);
     try {
+      // First, create or update the flashcard
       const url = editingCard
         ? `/api/admin/flashcards/${editingCard.id}`
         : "/api/admin/flashcards";
@@ -179,14 +269,43 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
         throw new Error(error.error || "Failed to save flashcard");
       }
 
+      const savedCard = await res.json();
+      const flashcardId = savedCard.flashcard?.id || savedCard.id;
+
+      // Upload only new images (not existing ones)
+      const newImages = [...questionImages, ...answerImages].filter(img => !img.isExisting && img.file);
+      if (newImages.length > 0) {
+        setUploadingImages(true);
+        for (const image of newImages) {
+          const formData = new FormData();
+          formData.append('file', image.file!);
+          formData.append('flashcardId', flashcardId);
+          formData.append('placement', image.placement);
+          formData.append('order', image.order.toString());
+
+          const uploadRes = await fetch('/api/admin/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!uploadRes.ok) {
+            console.error('Failed to upload image:', image.file!.name);
+          }
+        }
+        setUploadingImages(false);
+      }
+
       toast.success(editingCard ? "Card updated successfully" : "Card created successfully");
       setIsDialogOpen(false);
+      setQuestionImages([]);
+      setAnswerImages([]);
       loadDeckData();
     } catch (error) {
       console.error("Error saving card:", error);
       toast.error(error instanceof Error ? error.message : "Failed to save card");
     } finally {
       setIsSaving(false);
+      setUploadingImages(false);
     }
   };
 
@@ -511,11 +630,40 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                 placeholder="Enter the question..."
                 className="bg-white border-slate-300 text-slate-900 min-h-[120px]"
               />
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm">
-                  <ImageIcon className="w-4 h-4 mr-2" />
-                  Add Image
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleImageSelect('question')}
+                  >
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Add Image
+                  </Button>
+                </div>
+                {questionImages.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {questionImages.map((img, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={img.preview}
+                          alt={`Question image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded border border-slate-300"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemoveImage('question', index)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -528,11 +676,40 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                 placeholder="Enter the answer..."
                 className="bg-white border-slate-300 text-slate-900 min-h-[120px]"
               />
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm">
-                  <ImageIcon className="w-4 h-4 mr-2" />
-                  Add Image
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleImageSelect('answer')}
+                  >
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Add Image
+                  </Button>
+                </div>
+                {answerImages.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {answerImages.map((img, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={img.preview}
+                          alt={`Answer image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded border border-slate-300"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemoveImage('answer', index)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -579,7 +756,7 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
               {isSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  {uploadingImages ? "Uploading images..." : "Saving..."}
                 </>
               ) : (
                 <>{editingCard ? "Update" : "Create"} Card</>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { uploadImageToBlob } from '@/lib/blob';
+import { db } from '@/lib/db';
+import { flashcardMedia } from '@/lib/db/schema';
 
 /**
  * POST /api/admin/upload
@@ -45,6 +47,21 @@ export async function POST(request: NextRequest) {
       placement,
       order
     );
+
+    // Insert media record into database (only if flashcardId is not 'temp')
+    if (flashcardId !== 'temp') {
+      await db.insert(flashcardMedia).values({
+        flashcardId,
+        fileUrl: uploadResult.url,
+        fileKey: uploadResult.key,
+        fileName: uploadResult.fileName,
+        fileSize: uploadResult.fileSize,
+        mimeType: uploadResult.mimeType,
+        placement,
+        order,
+        altText: null,
+      });
+    }
 
     return NextResponse.json({
       success: true,
