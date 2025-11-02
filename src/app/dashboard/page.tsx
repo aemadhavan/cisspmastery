@@ -100,7 +100,9 @@ export default async function DashboardPage() {
 
   // For free users, limit the total cards displayed and used in calculations
   const displayTotalCards = hasPaidPlan ? totalCards : Math.min(totalCards, 10);
-  const overallProgress = displayTotalCards > 0 ? Math.round((studiedCards / displayTotalCards) * 100) : 0;
+  // Cap studied cards at display total to prevent progress > 100%
+  const effectiveStudiedCards = Math.min(studiedCards, displayTotalCards);
+  const overallProgress = displayTotalCards > 0 ? Math.round((effectiveStudiedCards / displayTotalCards) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -162,7 +164,7 @@ export default async function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">{studiedCards}</div>
+              <div className="text-3xl font-bold text-white">{effectiveStudiedCards}</div>
               <p className="text-xs text-gray-400 mt-1">
                 Keep going!
               </p>
