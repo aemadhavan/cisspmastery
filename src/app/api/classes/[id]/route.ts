@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { classes, decks, flashcards, userCardProgress } from '@/lib/db/schema';
 import { eq, and, inArray, asc } from 'drizzle-orm';
+import { cache } from '@/lib/redis';
+import { CacheKeys, CacheTTL } from '@/lib/redis/cache-keys';
 
 // GET /api/classes/:id - Get a specific class with its decks (public for logged-in users)
 export async function GET(
@@ -18,7 +20,26 @@ export async function GET(
 
     const { id } = await params;
 
-    // Fetch class data
+    // Try to get from cache first (user-specific cache)
+    const cacheKey = CacheKeys.class.details(id, userId);
+    const cachedData = await cache.get<{
+      id: string;
+      name: string;
+      description: string | null;
+      icon: string | null;
+      color: string | null;
+      createdBy: string | null;
+      decks: unknown[];
+    }>(cacheKey);
+
+    if (cachedData) {
+      const response = NextResponse.json(cachedData);
+      response.headers.set('X-Cache', 'HIT');
+      response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+      return response;
+    }
+
+    // Cache miss - fetch from database
     const classData = await db.query.classes.findFirst({
       where: eq(classes.id, id),
       with: {
@@ -80,7 +101,7 @@ export async function GET(
       };
     });
 
-    const response = NextResponse.json({
+    const responseData = {
       id: classData.id,
       name: classData.name,
       description: classData.description,
@@ -88,8 +109,15 @@ export async function GET(
       color: classData.color,
       createdBy: classData.createdBy,
       decks: decksWithProgress,
+    };
+
+    // Store in cache (fire and forget)
+    cache.set(cacheKey, responseData, { ttl: CacheTTL.CLASS_DETAILS }).catch((error) => {
+      console.error('Failed to cache class details:', error);
     });
 
+    const response = NextResponse.json(responseData);
+    response.headers.set('X-Cache', 'MISS');
     // Enable caching for 60 seconds with stale-while-revalidate
     response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
 

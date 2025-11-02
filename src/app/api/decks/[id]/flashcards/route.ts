@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { decks, flashcards, flashcardMedia } from '@/lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
+import { cache } from '@/lib/redis';
+import { CacheKeys, CacheTTL } from '@/lib/redis/cache-keys';
 
 /**
  * GET /api/decks/[id]/flashcards
@@ -21,7 +23,27 @@ export async function GET(
 
     const { id } = await params;
 
-    // Get deck with its class
+    // Try to get from cache first
+    const cacheKey = CacheKeys.deck.flashcards(id);
+    const cachedData = await cache.get<{
+      deck: {
+        id: string;
+        name: string;
+        description: string | null;
+        classId: string;
+        className: string;
+      };
+      flashcards: unknown[];
+      total: number;
+    }>(cacheKey);
+
+    if (cachedData) {
+      const response = NextResponse.json(cachedData);
+      response.headers.set('X-Cache', 'HIT');
+      return response;
+    }
+
+    // Cache miss - fetch from database
     const deck = await db.query.decks.findFirst({
       where: and(
         eq(decks.id, id),
@@ -67,7 +89,7 @@ export async function GET(
       })),
     }));
 
-    return NextResponse.json({
+    const responseData = {
       deck: {
         id: deck.id,
         name: deck.name,
@@ -77,7 +99,16 @@ export async function GET(
       },
       flashcards: formattedFlashcards,
       total: formattedFlashcards.length,
+    };
+
+    // Store in cache (fire and forget)
+    cache.set(cacheKey, responseData, { ttl: CacheTTL.FLASHCARDS }).catch((error) => {
+      console.error('Failed to cache deck flashcards:', error);
     });
+
+    const response = NextResponse.json(responseData);
+    response.headers.set('X-Cache', 'MISS');
+    return response;
 
   } catch (error) {
     console.error('Error fetching deck flashcards:', error);

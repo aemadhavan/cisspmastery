@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -115,10 +116,13 @@ export function ImageLightbox({
         onClick={(e) => e.stopPropagation()}
       >
         {currentImage?.url && (
-          <img
+          <Image
             src={currentImage.url}
             alt={currentImage.altText || currentImage.fileName}
+            width={1400}
+            height={1000}
             className="max-w-full max-h-full object-contain rounded"
+            unoptimized
           />
         )}
       </div>

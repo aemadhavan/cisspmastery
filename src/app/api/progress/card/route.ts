@@ -3,6 +3,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { userCardProgress, flashcards, sessionCards, users, subscriptions, userStats } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { CacheInvalidation, safeInvalidate } from '@/lib/redis/invalidation';
 
 /**
  * Ensure user exists in database, create if not
@@ -88,9 +89,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if flashcard exists
+    // Check if flashcard exists and get deck info for cache invalidation
     const flashcard = await db.query.flashcards.findFirst({
       where: eq(flashcards.id, flashcardId),
+      with: {
+        deck: true,
+      },
     });
 
     if (!flashcard) {
@@ -159,6 +163,11 @@ export async function POST(request: NextRequest) {
         confidenceRating: confidenceLevel,
       });
     }
+
+    // Invalidate related cache entries
+    await safeInvalidate(() =>
+      CacheInvalidation.userProgress(userId, flashcardId, flashcard.deck.classId)
+    );
 
     return NextResponse.json({
       success: true,

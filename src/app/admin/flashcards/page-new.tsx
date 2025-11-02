@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -693,9 +694,11 @@ export default function AdminFlashcardsPage() {
                                     title={img.altText || img.fileName}
                                     onClick={() => handleImageClick(questionImages, index)}
                                   >
-                                    <img
-                                      src={img.url}
+                                    <Image
+                                      src={img.url || ''}
                                       alt={img.altText || 'Question image'}
+                                      width={80}
+                                      height={80}
                                       className="w-20 h-20 object-cover rounded border border-slate-600 hover:border-purple-500 transition-colors"
                                     />
                                     <div className="absolute top-1 left-1 bg-purple-500/90 text-white text-xs px-1 rounded">
@@ -728,9 +731,11 @@ export default function AdminFlashcardsPage() {
                                     title={img.altText || img.fileName}
                                     onClick={() => handleImageClick(answerImages, index)}
                                   >
-                                    <img
-                                      src={img.url}
+                                    <Image
+                                      src={img.url || ''}
                                       alt={img.altText || 'Answer image'}
+                                      width={80}
+                                      height={80}
                                       className="w-20 h-20 object-cover rounded border border-slate-600 hover:border-purple-500 transition-colors"
                                     />
                                     <div className="absolute top-1 left-1 bg-purple-500/90 text-white text-xs px-1 rounded">

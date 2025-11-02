@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { X, GripVertical } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,10 +69,13 @@ export function ImagePreview({
 
       {/* Image */}
       {image.url ? (
-        <img
+        <Image
           src={image.url}
           alt={image.altText || image.fileName}
+          width={400}
+          height={128}
           className="w-full h-32 object-cover"
+          unoptimized
         />
       ) : (
         <div className="w-full h-32 bg-slate-800 flex items-center justify-center">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -646,10 +647,13 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {questionImages.map((img, index) => (
                       <div key={index} className="relative group">
-                        <img
+                        <Image
                           src={img.preview}
                           alt={`Question image ${index + 1}`}
+                          width={200}
+                          height={96}
                           className="w-full h-24 object-cover rounded border border-slate-300"
+                          unoptimized
                         />
                         <Button
                           type="button"
@@ -692,10 +696,13 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {answerImages.map((img, index) => (
                       <div key={index} className="relative group">
-                        <img
+                        <Image
                           src={img.preview}
                           alt={`Answer image ${index + 1}`}
+                          width={200}
+                          height={96}
                           className="w-full h-24 object-cover rounded border border-slate-300"
+                          unoptimized
                         />
                         <Button
                           type="button"

@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { flashcards, decks, flashcardMedia } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { deleteMultipleImagesFromBlob } from '@/lib/blob';
+import { CacheInvalidation, safeInvalidate } from '@/lib/redis/invalidation';
 
 /**
  * PATCH /api/admin/flashcards/[id]
@@ -124,8 +125,20 @@ export async function PATCH(
         media: {
           orderBy: [asc(flashcardMedia.order)],
         },
+        deck: true,
       },
     });
+
+    // Invalidate related cache entries
+    if (completeFlashcard) {
+      await safeInvalidate(() =>
+        CacheInvalidation.flashcard(
+          id,
+          completeFlashcard.deckId,
+          completeFlashcard.deck.classId
+        )
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -159,6 +172,7 @@ export async function DELETE(
       where: eq(flashcards.id, id),
       with: {
         media: true,
+        deck: true,
       },
     });
 
@@ -194,6 +208,11 @@ export async function DELETE(
         })
         .where(eq(decks.id, deck.id));
     }
+
+    // Invalidate related cache entries
+    await safeInvalidate(() =>
+      CacheInvalidation.flashcard(id, existingCard.deckId, existingCard.deck.classId)
+    );
 
     return NextResponse.json({
       success: true,

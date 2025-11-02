@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
 import { flashcards, decks, flashcardMedia } from '@/lib/db/schema';
 import { eq, desc, asc } from 'drizzle-orm';
+import { CacheInvalidation, safeInvalidate } from '@/lib/redis/invalidation';
 
 /**
  * GET /api/admin/flashcards
@@ -162,6 +163,11 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Invalidate related cache entries
+    await safeInvalidate(() =>
+      CacheInvalidation.flashcard(flashcard.id, deckId, deck.classId)
+    );
 
     return NextResponse.json({
       success: true,

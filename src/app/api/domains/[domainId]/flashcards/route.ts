@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { classes, decks, flashcards, flashcardMedia } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
+import { cache } from '@/lib/redis';
+import { CacheKeys, CacheTTL } from '@/lib/redis/cache-keys';
 
 /**
  * GET /api/domains/[domainId]/flashcards
@@ -21,7 +23,21 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch class with all its flashcards
+    // Try to get from cache first
+    const cacheKey = CacheKeys.domainFlashcards.all(domainId);
+    const cachedData = await cache.get<{
+      domain: { id: string; name: string; description: string | null };
+      flashcards: unknown[];
+      totalCards: number;
+    }>(cacheKey);
+
+    if (cachedData) {
+      const response = NextResponse.json(cachedData);
+      response.headers.set('X-Cache', 'HIT');
+      return response;
+    }
+
+    // Cache miss - fetch from database
     const classItem = await db.query.classes.findFirst({
       where: eq(classes.id, domainId),
       with: {
@@ -66,7 +82,7 @@ export async function GET(
       }))
     );
 
-    return NextResponse.json({
+    const responseData = {
       domain: {
         id: classItem.id,
         name: classItem.name,
@@ -74,7 +90,16 @@ export async function GET(
       },
       flashcards: allFlashcards,
       totalCards: allFlashcards.length,
+    };
+
+    // Store in cache (fire and forget)
+    cache.set(cacheKey, responseData, { ttl: CacheTTL.FLASHCARDS }).catch((error) => {
+      console.error('Failed to cache domain flashcards:', error);
     });
+
+    const response = NextResponse.json(responseData);
+    response.headers.set('X-Cache', 'MISS');
+    return response;
 
   } catch (error) {
     console.error('Error fetching flashcards:', error);
