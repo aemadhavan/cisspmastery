@@ -15,16 +15,54 @@ export interface CacheOptions {
   ttl?: number; // Time to live in seconds
 }
 
+export interface CacheMetrics {
+  hits: number;
+  misses: number;
+  sets: number;
+  deletes: number;
+  errors: number;
+  hitRate: number;
+  totalOperations: number;
+  connectionStatus: 'connected' | 'disconnected' | 'unknown';
+  lastError: string | null;
+  lastErrorTime: number | null;
+}
+
 class RedisCache {
   private enabled: boolean;
+  private metrics: CacheMetrics;
 
   constructor() {
     // Check if Redis is configured
     this.enabled = !!process.env.KV_REST_API_URL;
 
+    // Initialize metrics
+    this.metrics = {
+      hits: 0,
+      misses: 0,
+      sets: 0,
+      deletes: 0,
+      errors: 0,
+      hitRate: 0,
+      totalOperations: 0,
+      connectionStatus: this.enabled ? 'unknown' : 'disconnected',
+      lastError: null,
+      lastErrorTime: null,
+    };
+
     if (!this.enabled) {
       console.warn('Redis cache is not configured. Caching will be disabled.');
     }
+  }
+
+  /**
+   * Update hit rate calculation
+   */
+  private updateHitRate(): void {
+    this.metrics.totalOperations = this.metrics.hits + this.metrics.misses;
+    this.metrics.hitRate = this.metrics.totalOperations > 0
+      ? (this.metrics.hits / this.metrics.totalOperations) * 100
+      : 0;
   }
 
   /**
@@ -35,8 +73,22 @@ class RedisCache {
 
     try {
       const value = await kv.get<T>(key);
+
+      // Track metrics
+      if (value !== null) {
+        this.metrics.hits++;
+        this.metrics.connectionStatus = 'connected';
+      } else {
+        this.metrics.misses++;
+      }
+      this.updateHitRate();
+
       return value;
     } catch (error) {
+      this.metrics.errors++;
+      this.metrics.connectionStatus = 'disconnected';
+      this.metrics.lastError = error instanceof Error ? error.message : 'Unknown error';
+      this.metrics.lastErrorTime = Date.now();
       console.error(`Redis GET error for key "${key}":`, error);
       return null;
     }
@@ -56,8 +108,17 @@ class RedisCache {
         // Set without expiration
         await kv.set(key, value);
       }
+
+      // Track metrics
+      this.metrics.sets++;
+      this.metrics.connectionStatus = 'connected';
+
       return true;
     } catch (error) {
+      this.metrics.errors++;
+      this.metrics.connectionStatus = 'disconnected';
+      this.metrics.lastError = error instanceof Error ? error.message : 'Unknown error';
+      this.metrics.lastErrorTime = Date.now();
       console.error(`Redis SET error for key "${key}":`, error);
       return false;
     }
@@ -71,8 +132,17 @@ class RedisCache {
 
     try {
       await kv.del(key);
+
+      // Track metrics
+      this.metrics.deletes++;
+      this.metrics.connectionStatus = 'connected';
+
       return true;
     } catch (error) {
+      this.metrics.errors++;
+      this.metrics.connectionStatus = 'disconnected';
+      this.metrics.lastError = error instanceof Error ? error.message : 'Unknown error';
+      this.metrics.lastErrorTime = Date.now();
       console.error(`Redis DEL error for key "${key}":`, error);
       return false;
     }
@@ -152,6 +222,67 @@ class RedisCache {
     });
 
     return data;
+  }
+
+  /**
+   * Get current cache metrics
+   */
+  getMetrics(): CacheMetrics {
+    return { ...this.metrics };
+  }
+
+  /**
+   * Reset cache metrics
+   */
+  resetMetrics(): void {
+    this.metrics = {
+      hits: 0,
+      misses: 0,
+      sets: 0,
+      deletes: 0,
+      errors: 0,
+      hitRate: 0,
+      totalOperations: 0,
+      connectionStatus: this.enabled ? 'unknown' : 'disconnected',
+      lastError: null,
+      lastErrorTime: null,
+    };
+  }
+
+  /**
+   * Check Redis connection health
+   */
+  async checkHealth(): Promise<{ healthy: boolean; latency: number; error?: string }> {
+    if (!this.enabled) {
+      return { healthy: false, latency: 0, error: 'Redis not configured' };
+    }
+
+    const startTime = performance.now();
+    try {
+      const testKey = '__health_check__';
+      await kv.set(testKey, 'ping', { ex: 5 });
+      const value = await kv.get(testKey);
+      await kv.del(testKey);
+
+      const latency = performance.now() - startTime;
+      this.metrics.connectionStatus = 'connected';
+
+      return {
+        healthy: value === 'ping',
+        latency: Math.round(latency * 100) / 100,
+      };
+    } catch (error) {
+      const latency = performance.now() - startTime;
+      this.metrics.connectionStatus = 'disconnected';
+      this.metrics.lastError = error instanceof Error ? error.message : 'Unknown error';
+      this.metrics.lastErrorTime = Date.now();
+
+      return {
+        healthy: false,
+        latency: Math.round(latency * 100) / 100,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, boolean, varchar, uuid, decimal, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, boolean, varchar, uuid, decimal, pgEnum, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Enums
@@ -84,7 +84,12 @@ export const decks = pgTable('decks', {
   createdBy: varchar('created_by', { length: 255 }).notNull().references(() => users.clerkUserId), // Admin who created it
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for filtering decks by class and published status
+  classPublishedIdx: index('idx_decks_class_published').on(table.classId, table.isPublished),
+  // Index for ordering decks within a class
+  classOrderIdx: index('idx_decks_class_order').on(table.classId, table.order),
+}));
 
 // Flashcards table - Individual cards within a deck
 // ✅ ADMIN CREATES ONLY
@@ -94,12 +99,18 @@ export const flashcards = pgTable('flashcards', {
   question: text('question').notNull(),
   answer: text('answer').notNull(),
   explanation: text('explanation'), // Additional context or learning tips
+  difficulty: integer('difficulty'), // Difficulty level (if used in your app)
   order: integer('order').notNull().default(0),
   isPublished: boolean('is_published').default(true), // Admins can draft cards
   createdBy: varchar('created_by', { length: 255 }).notNull().references(() => users.clerkUserId), // Admin who created it
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for filtering flashcards by deck and published status
+  deckPublishedIdx: index('idx_flashcards_deck_published').on(table.deckId, table.isPublished),
+  // Index for ordering flashcards within a deck
+  deckOrderIdx: index('idx_flashcards_deck_order').on(table.deckId, table.order),
+}));
 
 // Flashcard Media table - Stores images for questions and answers
 // Up to 5 images per question, 5 per answer (10 total per card)
@@ -136,7 +147,12 @@ export const userCardProgress = pgTable('user_card_progress', {
   masteryStatus: masteryStatusEnum('mastery_status').notNull().default('new'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  // Composite index for the most common query pattern: filtering by user and multiple flashcard IDs
+  userFlashcardIdx: index('idx_user_card_progress_user_flashcard').on(table.clerkUserId, table.flashcardId),
+  // Index for mastery status filtering and grouping
+  masteryStatusIdx: index('idx_user_card_progress_mastery').on(table.clerkUserId, table.masteryStatus),
+}));
 
 // Study sessions table - Tracks study sessions
 // ✅ USERS STUDY CARDS
@@ -150,7 +166,12 @@ export const studySessions = pgTable('study_sessions', {
   averageConfidence: decimal('average_confidence', { precision: 3, scale: 2 }),
   studyDuration: integer('study_duration'), // in seconds
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for querying user's study sessions
+  userDeckIdx: index('idx_study_sessions_user_deck').on(table.clerkUserId, table.deckId),
+  // Index for time-based queries
+  userStartedIdx: index('idx_study_sessions_user_started').on(table.clerkUserId, table.startedAt),
+}));
 
 // Session cards table - Tracks individual card reviews within a session
 // ✅ USERS RATE CARDS

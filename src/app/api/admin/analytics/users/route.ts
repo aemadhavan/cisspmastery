@@ -21,8 +21,9 @@ export async function GET(request: NextRequest) {
       return getUserAnalytics(userId, domainId);
     }
 
-    // Get all users with their stats
-    const allUsers = await db
+    // OPTIMIZED: Single aggregated query instead of N+1 queries
+    // Get all users with their stats AND mastery breakdown in one query
+    const usersWithProgress = await db
       .select({
         clerkUserId: users.clerkUserId,
         email: users.email,
@@ -33,41 +34,45 @@ export async function GET(request: NextRequest) {
         studyStreakDays: userStats.studyStreakDays,
         totalStudyTime: userStats.totalStudyTime,
         lastActiveDate: userStats.lastActiveDate,
+        // Aggregate mastery counts in single query
+        newCount: sql<number>`COUNT(CASE WHEN ${userCardProgress.masteryStatus} = 'new' THEN 1 END)::int`,
+        learningCount: sql<number>`COUNT(CASE WHEN ${userCardProgress.masteryStatus} = 'learning' THEN 1 END)::int`,
+        masteredCount: sql<number>`COUNT(CASE WHEN ${userCardProgress.masteryStatus} = 'mastered' THEN 1 END)::int`,
       })
       .from(users)
       .leftJoin(userStats, eq(users.clerkUserId, userStats.clerkUserId))
-      .orderBy(desc(userStats.totalCardsStudied));
-
-    // For each user, get their domain-wise progress
-    const usersWithProgress = await Promise.all(
-      allUsers.map(async (user) => {
-        // Get mastery breakdown
-        const progressRecords = await db
-          .select({
-            masteryStatus: userCardProgress.masteryStatus,
-            count: sql<number>`count(*)::int`,
-          })
-          .from(userCardProgress)
-          .where(eq(userCardProgress.clerkUserId, user.clerkUserId))
-          .groupBy(userCardProgress.masteryStatus);
-
-        const masteryBreakdown = {
-          new: 0,
-          learning: 0,
-          mastered: 0,
-        };
-
-        progressRecords.forEach((record) => {
-          masteryBreakdown[record.masteryStatus as keyof typeof masteryBreakdown] = record.count;
-        });
-
-        return {
-          ...user,
-          masteryBreakdown,
-          totalCardsInProgress: masteryBreakdown.new + masteryBreakdown.learning + masteryBreakdown.mastered,
-        };
-      })
-    );
+      .leftJoin(userCardProgress, eq(users.clerkUserId, userCardProgress.clerkUserId))
+      .groupBy(
+        users.clerkUserId,
+        users.email,
+        users.name,
+        users.role,
+        users.createdAt,
+        userStats.totalCardsStudied,
+        userStats.studyStreakDays,
+        userStats.totalStudyTime,
+        userStats.lastActiveDate
+      )
+      .orderBy(desc(userStats.totalCardsStudied))
+      .then((results) =>
+        results.map((user) => ({
+          clerkUserId: user.clerkUserId,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          createdAt: user.createdAt,
+          totalCardsStudied: user.totalCardsStudied,
+          studyStreakDays: user.studyStreakDays,
+          totalStudyTime: user.totalStudyTime,
+          lastActiveDate: user.lastActiveDate,
+          masteryBreakdown: {
+            new: user.newCount || 0,
+            learning: user.learningCount || 0,
+            mastered: user.masteredCount || 0,
+          },
+          totalCardsInProgress: (user.newCount || 0) + (user.learningCount || 0) + (user.masteredCount || 0),
+        }))
+      );
 
     return NextResponse.json({
       users: usersWithProgress,

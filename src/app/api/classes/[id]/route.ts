@@ -5,16 +5,21 @@ import { classes, decks, flashcards, userCardProgress } from '@/lib/db/schema';
 import { eq, and, inArray, asc } from 'drizzle-orm';
 import { cache } from '@/lib/redis';
 import { CacheKeys, CacheTTL } from '@/lib/redis/cache-keys';
+import { createApiTimer, addTimingHeaders, formatTimingLog, timeAsync } from '@/lib/api-timing';
 
 // GET /api/classes/:id - Get a specific class with its decks (public for logged-in users)
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const timer = createApiTimer('/api/classes/[id]', request.method);
+
   try {
     const { userId } = await auth();
 
     if (!userId) {
+      const metrics = timer.end(401);
+      console.log(formatTimingLog(metrics));
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -22,40 +27,52 @@ export async function GET(
 
     // Try to get from cache first (user-specific cache)
     const cacheKey = CacheKeys.class.details(id, userId);
-    const cachedData = await cache.get<{
-      id: string;
-      name: string;
-      description: string | null;
-      icon: string | null;
-      color: string | null;
-      createdBy: string | null;
-      decks: unknown[];
-    }>(cacheKey);
+    const cachedData = await timeAsync(
+      timer,
+      async () => cache.get<{
+        id: string;
+        name: string;
+        description: string | null;
+        icon: string | null;
+        color: string | null;
+        createdBy: string | null;
+        decks: unknown[];
+      }>(cacheKey),
+      'cache'
+    );
 
     if (cachedData) {
+      const metrics = timer.end(200);
+      console.log(formatTimingLog(metrics));
       const response = NextResponse.json(cachedData);
       response.headers.set('X-Cache', 'HIT');
       response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
-      return response;
+      return addTimingHeaders(response, metrics);
     }
 
     // Cache miss - fetch from database
-    const classData = await db.query.classes.findFirst({
-      where: eq(classes.id, id),
-      with: {
-        decks: {
-          where: eq(decks.isPublished, true),
-          orderBy: [asc(decks.order)],
-          with: {
-            flashcards: {
-              where: eq(flashcards.isPublished, true),
+    const classData = await timeAsync(
+      timer,
+      async () => db.query.classes.findFirst({
+        where: eq(classes.id, id),
+        with: {
+          decks: {
+            where: eq(decks.isPublished, true),
+            orderBy: [asc(decks.order)],
+            with: {
+              flashcards: {
+                where: eq(flashcards.isPublished, true),
+              },
             },
           },
         },
-      },
-    });
+      }),
+      'db'
+    );
 
     if (!classData) {
+      const metrics = timer.end(404);
+      console.log(formatTimingLog(metrics));
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
     }
 
@@ -67,15 +84,19 @@ export async function GET(
 
     // Single batch query for all progress records
     const allProgressRecords = allFlashcardIds.length > 0
-      ? await db
-          .select()
-          .from(userCardProgress)
-          .where(
-            and(
-              eq(userCardProgress.clerkUserId, userId),
-              inArray(userCardProgress.flashcardId, allFlashcardIds)
-            )
-          )
+      ? await timeAsync(
+          timer,
+          async () => db
+            .select()
+            .from(userCardProgress)
+            .where(
+              and(
+                eq(userCardProgress.clerkUserId, userId),
+                inArray(userCardProgress.flashcardId, allFlashcardIds)
+              )
+            ),
+          'db'
+        )
       : [];
 
     // Create a Set for O(1) lookup
@@ -116,13 +137,18 @@ export async function GET(
       console.error('Failed to cache class details:', error);
     });
 
+    const metrics = timer.end(200);
+    console.log(formatTimingLog(metrics));
+
     const response = NextResponse.json(responseData);
     response.headers.set('X-Cache', 'MISS');
     // Enable caching for 60 seconds with stale-while-revalidate
     response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
 
-    return response;
+    return addTimingHeaders(response, metrics);
   } catch (error) {
+    const metrics = timer.end(500);
+    console.error(formatTimingLog(metrics));
     console.error('Error fetching class:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch class';
     return NextResponse.json(
