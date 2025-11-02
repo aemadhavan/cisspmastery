@@ -11,12 +11,15 @@ if (!connectionString) {
 }
 
 // Create postgres client with connection pooling for Xata
-// Xata has a concurrent connection limit, so we use a small pool
+// Optimized for better performance while respecting connection limits
 const client = postgres(connectionString, {
   prepare: false,
-  max: 1, // Xata free tier has strict connection limits
-  idle_timeout: 20,
+  max: 10, // Increased pool size for better concurrency
+  idle_timeout: 60, // Keep connections alive longer (60 seconds)
   max_lifetime: 60 * 30, // 30 minutes
+  connect_timeout: 10, // Add connection timeout (10 seconds)
+  // Keep connections warm
+  onnotice: () => {}, // Suppress notices
 });
 
 // Drizzle instance optimized for PostgreSQL
