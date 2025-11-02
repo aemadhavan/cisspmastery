@@ -1,11 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
-import { classes, userCardProgress, flashcards, decks } from "@/lib/db/schema";
+import { classes, userCardProgress, flashcards, decks, userStats } from "@/lib/db/schema";
 import { eq, and, sql, asc, inArray } from "drizzle-orm";
+import { Play, BookOpen, FileText, Lightbulb, Flame } from "lucide-react";
 
 const getColorClass = (color: string | null) => {
   const colorMap: { [key: string]: string } = {
@@ -24,12 +26,14 @@ const getColorClass = (color: string | null) => {
 
 export default async function DashboardPage() {
   const { userId, has } = await auth();
+  const user = await currentUser();
 
   if (!userId) {
     redirect("/sign-in");
   }
 
   const hasPaidPlan = has({ plan: 'paid' });
+  const userName = user?.firstName || "there";
 
   // Fetch all classes with their decks and flashcards
   const allClasses = await db.query.classes.findMany({
@@ -60,6 +64,7 @@ export default async function DashboardPage() {
 
       // Get user's progress for this class
       let progress = 0;
+      let studiedCount = 0;
       if (totalCards > 0 && flashcardIds.length > 0) {
         const progressRecords = await db
           .select()
@@ -71,7 +76,11 @@ export default async function DashboardPage() {
             )
           );
 
-        progress = Math.round((progressRecords.length / totalCards) * 100);
+        studiedCount = progressRecords.length;
+        // For free users, cap the total cards used in progress calculation
+        const effectiveTotalCards = hasPaidPlan ? totalCards : Math.min(totalCards, 10);
+        const effectiveProgressCount = Math.min(progressRecords.length, effectiveTotalCards);
+        progress = Math.round((effectiveProgressCount / effectiveTotalCards) * 100);
       }
 
       return {
@@ -84,6 +93,7 @@ export default async function DashboardPage() {
         cardCount: totalCards,
         deckCount,
         progress,
+        studiedCount,
       };
     })
   );
@@ -104,164 +114,198 @@ export default async function DashboardPage() {
   const effectiveStudiedCards = Math.min(studiedCards, displayTotalCards);
   const overallProgress = displayTotalCards > 0 ? Math.round((effectiveStudiedCards / displayTotalCards) * 100) : 0;
 
+  // Get user stats for daily goal and streak
+  const [userStatsRecord] = await db
+    .select()
+    .from(userStats)
+    .where(eq(userStats.clerkUserId, userId))
+    .limit(1);
+
+  const studyStreak = userStatsRecord?.studyStreakDays || 0;
+  const totalStudyTime = userStatsRecord?.totalStudyTime || 0;
+  const dailyGoal = 60; // 60 minutes daily goal
+  const todayStudyTime = Math.min(totalStudyTime / 60, dailyGoal); // Convert to minutes
+
+  // Get classes in progress (not 100% complete)
+  const continueStudyingClasses = classesWithProgress
+    .filter(cls => cls.progress > 0 && cls.progress < 100)
+    .slice(0, 2);
+
+  // If no in-progress classes, show first two classes
+  const displayClasses = continueStudyingClasses.length > 0
+    ? continueStudyingClasses
+    : classesWithProgress.slice(0, 2);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-            CISSP Mastery Dashboard
+            Welcome back, {userName}!
           </h1>
           <p className="text-gray-300">
-            Master CISSP concepts with confidence-based learning
+            Let&apos;s continue your journey to becoming a CISSP.
           </p>
         </div>
 
-        {/* Free User Banner */}
-        {!hasPaidPlan && (
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 mb-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Unlock Full Access
-                </h3>
-                <p className="text-purple-100">
-                  Get unlimited access to all flashcards and advanced features
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Overall Progress Card */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-gray-300">Overall Progress</h3>
+                  <span className="text-2xl font-bold text-blue-400">{overallProgress}%</span>
+                </div>
+                <Progress value={overallProgress} className="h-3 mb-2" />
+                <p className="text-sm text-gray-400">
+                  {effectiveStudiedCards}/{displayTotalCards} Cards Studied
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Continue Studying Section */}
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-4">Continue Studying</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {displayClasses.map((cls) => (
+                  <Card key={cls.id} className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all hover:border-blue-500 group">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3 mb-2">
+                        {cls.icon && (
+                          <span className="text-3xl">{cls.icon}</span>
+                        )}
+                        <div className={`w-3 h-3 rounded-full ${getColorClass(cls.color)}`}></div>
+                      </div>
+                      <CardTitle className="text-lg text-white group-hover:text-blue-400 transition-colors">
+                        {cls.name}
+                      </CardTitle>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {cls.progress}% complete
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <Progress value={cls.progress} className="mb-4" />
+                      <Link href={`/dashboard/class/${cls.id}`}>
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                          Continue
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-              <Link
-                href="/pricing"
-                className="bg-white text-purple-600 hover:bg-purple-50 font-semibold px-6 py-3 rounded-full transition-colors whitespace-nowrap"
-              >
-                Upgrade Now
-              </Link>
             </div>
           </div>
-        )}
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-400">
-                Total Cards
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">
-                {displayTotalCards}
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Across {classesWithProgress.length} classes
-              </p>
-            </CardContent>
-          </Card>
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Link href="/dashboard/session/new" className="block">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start">
+                    <Play className="mr-2 h-4 w-4" />
+                    Start New Session
+                  </Button>
+                </Link>
+                <Link href="/dashboard/practice" className="block">
+                  <Button variant="outline" className="w-full border-slate-600 text-white hover:bg-slate-700 justify-start">
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Take a Practice Quiz
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-400">
-                Cards Studied
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">{effectiveStudiedCards}</div>
-              <p className="text-xs text-gray-400 mt-1">
-                Keep going!
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-400">
-                Overall Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-white">{overallProgress}%</div>
-              <Progress value={overallProgress} className="mt-2" />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* CISSP Classes */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">
-            Study by Class
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {classesWithProgress.map((cls) => (
-              <Link
-                key={cls.id}
-                href={`/dashboard/class/${cls.id}`}
-                className="group"
-              >
-                <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all hover:border-purple-500">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {cls.icon && (
-                            <span className="text-2xl">{cls.icon}</span>
-                          )}
-                          <div className={`w-3 h-3 rounded-full ${getColorClass(cls.color)}`}></div>
-                        </div>
-                        <CardTitle className="text-lg text-white group-hover:text-purple-400 transition-colors">
-                          {cls.name}
-                        </CardTitle>
-                      </div>
+            {/* Daily Goal */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white">Daily Goal</CardTitle>
+                  {studyStreak > 0 && (
+                    <div className="flex items-center gap-1 text-orange-500">
+                      <Flame className="h-5 w-5" />
+                      <span className="font-bold">{studyStreak} Day Streak</span>
                     </div>
-                    {cls.description && (
-                      <CardDescription className="text-gray-400 text-sm mt-2">
-                        {cls.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm text-gray-400">
-                        {cls.deckCount} deck{cls.deckCount !== 1 ? 's' : ''} • {hasPaidPlan ? cls.cardCount : Math.min(cls.cardCount, 10)} cards
-                      </span>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {studyStreak > 0 ? (
+                  <p className="text-sm text-gray-300 mb-4">
+                    You&apos;re on a roll! Keep it up to build a strong study habit.
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-300 mb-4">
+                    Start your study streak today!
+                  </p>
+                )}
+                <div className="flex items-center justify-center mb-2">
+                  <div className="relative w-32 h-32">
+                    <svg className="w-full h-full" viewBox="0 0 100 100">
+                      {/* Background circle */}
+                      <circle
+                        className="text-slate-700"
+                        strokeWidth="8"
+                        stroke="currentColor"
+                        fill="transparent"
+                        r="42"
+                        cx="50"
+                        cy="50"
+                      />
+                      {/* Progress circle */}
+                      <circle
+                        className="text-blue-500"
+                        strokeWidth="8"
+                        strokeDasharray={`${(todayStudyTime / dailyGoal) * 264} 264`}
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        fill="transparent"
+                        r="42"
+                        cx="50"
+                        cy="50"
+                        transform="rotate(-90 50 50)"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold text-white">{Math.round(todayStudyTime)}/{dailyGoal}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={cls.progress} className="flex-1" />
-                      <span className="text-sm text-gray-400 font-medium">
-                        {cls.progress}%
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400 text-center">
+                  {dailyGoal - Math.round(todayStudyTime)} minutes left to hit your goal!
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Resources */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Resources</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Link href="/dashboard/practice-test" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700/50 transition-colors text-gray-300 hover:text-white">
+                  <FileText className="h-5 w-5" />
+                  <span>Full Practice Test</span>
+                </Link>
+                <Link href="/dashboard/glossary" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700/50 transition-colors text-gray-300 hover:text-white">
+                  <BookOpen className="h-5 w-5" />
+                  <span>Glossary</span>
+                </Link>
+                <Link href="/dashboard/exam-tips" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700/50 transition-colors text-gray-300 hover:text-white">
+                  <Lightbulb className="h-5 w-5" />
+                  <span>Exam Tips</span>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </div>
-
-        {/* Study Tips */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">Study Tips</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-gray-300">
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400">•</span>
-                <span>Study consistently - 20-30 minutes daily is better than cramming</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400">•</span>
-                <span>Be honest with confidence ratings - this helps optimize your learning</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400">•</span>
-                <span>Focus on understanding concepts, not just memorization</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400">•</span>
-                <span>Review cards you rated low more frequently</span>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
