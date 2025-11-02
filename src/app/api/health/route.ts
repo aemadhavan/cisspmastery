@@ -56,21 +56,26 @@ export async function GET() {
   try {
     const cacheStart = performance.now();
     const testKey = '__health_check__';
-    const testValue = Date.now().toString();
+    const testValue = { ping: 'pong', timestamp: Date.now() };
 
     // Try to set and get a value
     await cache.set(testKey, testValue, { ttl: 10 });
-    const retrieved = await cache.get<string>(testKey);
+
+    // Small delay to ensure write completes
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const retrieved = await cache.get<typeof testValue>(testKey);
     await cache.del(testKey);
 
     const cacheEnd = performance.now();
 
-    if (retrieved === testValue) {
+    // Compare JSON strings for accurate comparison
+    if (retrieved && JSON.stringify(retrieved) === JSON.stringify(testValue)) {
       health.services.cache.status = 'healthy';
       health.services.cache.responseTime = Math.round((cacheEnd - cacheStart) * 100) / 100;
     } else {
       health.services.cache.status = 'unhealthy';
-      health.services.cache.error = 'Cache write/read mismatch';
+      health.services.cache.error = `Cache write/read mismatch: expected ${JSON.stringify(testValue)}, got ${JSON.stringify(retrieved)}`;
       // Don't mark overall as unhealthy since cache is optional
       if (health.status === 'healthy') {
         health.status = 'degraded';
