@@ -3,17 +3,23 @@ import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
 import { classes } from '@/lib/db/schema';
 import { desc, asc } from 'drizzle-orm';
-import { handleApiError, assertExists } from '@/lib/api/error-handler';
+import { handleApiError } from '@/lib/api/error-handler';
 import { log } from '@/lib/logger';
+import { validateRequest, validateQueryParams } from '@/lib/api/validate';
+import { createClassSchema, classQuerySchema } from '@/lib/validations/class';
 
 // GET /api/admin/classes - Get all classes
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const admin = await requireAdmin();
 
+    // Validate query parameters
+    const queryParams = validateQueryParams(request, classQuerySchema);
+
     log.debug('Fetching all classes', {
       userId: admin.clerkUserId,
-      endpoint: '/api/admin/classes'
+      endpoint: '/api/admin/classes',
+      queryParams,
     });
 
     const allClasses = await db
@@ -42,27 +48,22 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const admin = await requireAdmin();
-    const body = await request.json();
 
-    const { name, description, order, icon, color, isPublished } = body;
-
-    // Validation
-    assertExists(name, 'Class name is required', 400);
+    // Validate request body
+    const validatedData = await validateRequest(request, createClassSchema);
 
     log.info('Creating new class', {
       userId: admin.clerkUserId,
-      className: name,
+      className: validatedData.name,
     });
 
     const newClass = await db
       .insert(classes)
       .values({
-        name,
-        description: description || null,
-        order: order || 0,
-        icon: icon || null,
-        color: color || 'purple',
-        isPublished: isPublished !== undefined ? isPublished : true,
+        ...validatedData,
+        description: validatedData.description || null,
+        icon: validatedData.icon || null,
+        color: validatedData.color || 'purple',
         createdBy: admin.clerkUserId,
       })
       .returning();
