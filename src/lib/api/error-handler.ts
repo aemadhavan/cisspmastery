@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { ZodError } from 'zod';
+
+// Optional Sentry import - only used if package is installed
+let Sentry: typeof import('@sentry/nextjs') | null = null;
+try {
+  Sentry = require('@sentry/nextjs');
+} catch {
+  // Sentry not installed - logging will still work without it
+  console.warn('[Error Handler] Sentry not installed - error tracking disabled');
+}
 
 /**
  * Custom API error class
@@ -157,6 +165,7 @@ export function handleApiError(
 
   // Send to Sentry in production (only for 500+ errors or ApiErrors)
   if (
+    Sentry &&
     process.env.NODE_ENV === 'production' &&
     (statusCode >= 500 || error instanceof ApiError)
   ) {

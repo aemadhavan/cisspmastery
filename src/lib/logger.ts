@@ -4,7 +4,16 @@
  * Replaces all console.log/error statements throughout the application
  */
 
-import * as Sentry from '@sentry/nextjs';
+// Optional Sentry import - only used if package is installed
+let Sentry: typeof import('@sentry/nextjs') | null = null;
+try {
+  Sentry = require('@sentry/nextjs');
+} catch {
+  // Sentry not installed - logging will still work without it
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('[Logger] Sentry not installed - error tracking disabled');
+  }
+}
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -86,7 +95,7 @@ function logMessage(
   }
 
   // Send to Sentry (production only, warn and error levels)
-  if (process.env.NODE_ENV === 'production') {
+  if (Sentry && process.env.NODE_ENV === 'production') {
     if (level === 'error' && error) {
       Sentry.captureException(error, {
         level: 'error',
@@ -200,15 +209,17 @@ export const log = {
     message: string,
     category: string = 'default',
     data?: Record<string, unknown>,
-    level: Sentry.SeverityLevel = 'info'
+    level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info'
   ): void => {
-    Sentry.addBreadcrumb({
-      message,
-      category,
-      data,
-      level,
-      timestamp: Date.now() / 1000,
-    });
+    if (Sentry) {
+      Sentry.addBreadcrumb({
+        message,
+        category,
+        data,
+        level,
+        timestamp: Date.now() / 1000,
+      });
+    }
   },
 };
 
@@ -230,19 +241,23 @@ export function setUserContext(user: {
   role?: string;
   [key: string]: unknown;
 }): void {
-  Sentry.setUser({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    ...user,
-  });
+  if (Sentry) {
+    Sentry.setUser({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      ...user,
+    });
+  }
 }
 
 /**
  * Clear user context (e.g., on logout)
  */
 export function clearUserContext(): void {
-  Sentry.setUser(null);
+  if (Sentry) {
+    Sentry.setUser(null);
+  }
 }
 
 /**
@@ -261,7 +276,9 @@ export function setContext(
   key: string,
   context: Record<string, unknown>
 ): void {
-  Sentry.setContext(key, context);
+  if (Sentry) {
+    Sentry.setContext(key, context);
+  }
 }
 
 /**
@@ -277,7 +294,9 @@ export function setContext(
  * ```
  */
 export function setTags(tags: Record<string, string>): void {
-  Sentry.setTags(tags);
+  if (Sentry) {
+    Sentry.setTags(tags);
+  }
 }
 
 /**
@@ -293,15 +312,17 @@ export function setTags(tags: Record<string, string>): void {
  */
 export function captureMessage(
   message: string,
-  level: Sentry.SeverityLevel = 'info',
+  level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info',
   context?: LogContext
 ): void {
-  Sentry.captureMessage(message, {
-    level,
-    contexts: {
-      custom: context,
-    },
-  });
+  if (Sentry) {
+    Sentry.captureMessage(message, {
+      level,
+      contexts: {
+        custom: context,
+      },
+    });
+  }
 }
 
 /**
@@ -321,9 +342,11 @@ export function captureException(
   error: Error,
   context?: LogContext
 ): void {
-  Sentry.captureException(error, {
-    contexts: {
-      custom: context,
-    },
-  });
+  if (Sentry) {
+    Sentry.captureException(error, {
+      contexts: {
+        custom: context,
+      },
+    });
+  }
 }
