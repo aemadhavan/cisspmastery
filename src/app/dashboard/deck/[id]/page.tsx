@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, RotateCcw, Loader2 } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import Flashcard from "@/components/Flashcard";
 import ConfidenceRating from "@/components/ConfidenceRating";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
@@ -46,6 +46,7 @@ export default function DeckStudyPage() {
   const [flashcards, setFlashcards] = useState<FlashcardData[]>([]);
   const [deck, setDeck] = useState<DeckData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bookmarkedCards, setBookmarkedCards] = useState<Set<string>>(new Set());
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showRating, setShowRating] = useState(false);
@@ -63,7 +64,11 @@ export default function DeckStudyPage() {
   const loadFlashcards = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/decks/${deckId}/flashcards`);
+      const res = await fetch(`/api/decks/${deckId}/flashcards`, {
+        // Enable browser caching with Next.js fetch cache
+        next: { revalidate: 60 }, // Revalidate every 60 seconds
+        cache: 'force-cache', // Use cached data when possible
+      });
       if (!res.ok) throw new Error("Failed to load flashcards");
 
       const data = await res.json();
@@ -136,12 +141,71 @@ export default function DeckStudyPage() {
     console.log('Reset Progress clicked - After: currentIndex set to 0, studiedCards cleared');
   };
 
+  const handleTest = () => {
+    toast.info("Test feature coming soon! This will allow you to test your knowledge with practice questions.");
+  };
+
+  const handleBookmarkToggle = async (flashcardId: string, isBookmarked: boolean) => {
+    try {
+      if (isBookmarked) {
+        // Add bookmark
+        const res = await fetch('/api/bookmarks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flashcardId }),
+        });
+
+        if (!res.ok) throw new Error('Failed to add bookmark');
+
+        setBookmarkedCards(prev => new Set(prev).add(flashcardId));
+        toast.success("Card bookmarked!");
+      } else {
+        // Remove bookmark
+        const res = await fetch(`/api/bookmarks/${flashcardId}`, {
+          method: 'DELETE',
+        });
+
+        if (!res.ok) throw new Error('Failed to remove bookmark');
+
+        setBookmarkedCards(prev => {
+          const updated = new Set(prev);
+          updated.delete(flashcardId);
+          return updated;
+        });
+        toast.success("Bookmark removed");
+      }
+    } catch (error) {
+      console.error('Bookmark error:', error);
+      toast.error("Failed to update bookmark");
+      // Revert the UI change on error by re-rendering
+      setBookmarkedCards(prev => new Set(prev));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-center items-center min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+          {/* Loading Skeleton for better UX */}
+          <div className="space-y-6 animate-pulse">
+            {/* Header skeleton */}
+            <div className="space-y-4">
+              <div className="h-10 w-32 bg-slate-700 rounded" />
+              <div className="h-8 w-64 bg-slate-700 rounded" />
+              <div className="h-4 w-40 bg-slate-700 rounded" />
+            </div>
+            {/* Progress bar skeleton */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <div className="h-4 w-20 bg-slate-700 rounded" />
+                <div className="h-4 w-12 bg-slate-700 rounded" />
+              </div>
+              <div className="h-2 w-full bg-slate-700 rounded" />
+            </div>
+            {/* Card skeleton */}
+            <div className="max-w-3xl mx-auto">
+              <div className="h-96 bg-slate-800 border border-slate-700 rounded-2xl" />
+            </div>
           </div>
         </div>
       </div>
@@ -237,8 +301,10 @@ export default function DeckStudyPage() {
             {/* Flashcard */}
             <Flashcard
               key={currentCard.id}
+              flashcardId={currentCard.id}
               question={currentCard.question}
               answer={currentCard.answer}
+              isBookmarked={bookmarkedCards.has(currentCard.id)}
               questionImages={currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order).map(m => ({
                 id: m.id,
                 url: m.fileUrl,
@@ -254,6 +320,8 @@ export default function DeckStudyPage() {
                 order: m.order
               }))}
               onFlip={handleFlip}
+              onTest={handleTest}
+              onBookmarkToggle={handleBookmarkToggle}
             />
 
             {/* Confidence Rating */}
@@ -289,10 +357,10 @@ export default function DeckStudyPage() {
           </div>
         )}
 
-        {/* Study Tips */}
+        {/* Study Tips - Removed backdrop-blur for better performance */}
         {!allCardsStudied && (
           <div className="mt-12 max-w-2xl mx-auto">
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-white mb-3">💡 Study Tip</h3>
               <p className="text-gray-300 text-sm">
                 Be honest with your confidence ratings. Cards you rate lower will appear more frequently

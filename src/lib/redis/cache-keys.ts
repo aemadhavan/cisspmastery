@@ -45,6 +45,18 @@ export const CacheKeys = {
     // Pattern to match all progress for a user
     userAll: (userId: string) => `progress:${userId}:*`,
   },
+
+  /**
+   * Bookmark keys
+   */
+  bookmarks: {
+    // All bookmarks for a user
+    userList: (userId: string) => `bookmarks:user:${userId}:list`,
+    // Check if a specific card is bookmarked
+    check: (userId: string, flashcardId: string) => `bookmarks:user:${userId}:card:${flashcardId}`,
+    // Pattern to match all bookmarks for a user
+    userAll: (userId: string) => `bookmarks:user:${userId}:*`,
+  },
 } as const;
 
 /**
@@ -68,4 +80,7 @@ export const CacheTTL = {
 
   // 1 hour for rarely changing data
   LONG: 60 * 60,
+
+  // 5 minutes for bookmarks (balance between freshness and performance)
+  BOOKMARKS: 5 * 60,
 } as const;

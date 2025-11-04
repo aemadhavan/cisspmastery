@@ -88,9 +88,9 @@ export default function BuyNowButton({
         )}
       </button>
 
-      {/* Email Dialog */}
+      {/* Email Dialog - Removed backdrop-blur for better performance */}
       {showEmailDialog && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setShowEmailDialog(false)}
@@ -102,8 +102,12 @@ export default function BuyNowButton({
             <h2 className="text-2xl font-bold text-white mb-2">
               Enter Your Email
             </h2>
-            <p className="text-gray-300 mb-6">
+            <p className="text-gray-300 mb-2">
               We&apos;ll send you a sign-in link after your purchase is complete.
+            </p>
+            <p className="text-amber-400 font-semibold mb-6 flex items-center gap-1">
+              <span className="text-lg">⚠️</span>
+              Email must match your LinkedIn account email.
             </p>
 
             <form onSubmit={handleEmailSubmit}>

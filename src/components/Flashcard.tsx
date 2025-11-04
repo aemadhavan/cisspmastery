@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
-import { X, ZoomIn } from "lucide-react";
+import { X, ZoomIn, TestTube, Bookmark, BookmarkCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface FlashcardMedia {
   id: string;
@@ -18,7 +19,11 @@ interface FlashcardProps {
   answer: string;
   questionImages?: FlashcardMedia[];
   answerImages?: FlashcardMedia[];
+  flashcardId?: string;
+  isBookmarked?: boolean;
   onFlip?: () => void;
+  onTest?: () => void;
+  onBookmarkToggle?: (flashcardId: string, isBookmarked: boolean) => void;
 }
 
 export default function Flashcard({
@@ -26,10 +31,15 @@ export default function Flashcard({
   answer,
   questionImages = [],
   answerImages = [],
-  onFlip
+  flashcardId,
+  isBookmarked = false,
+  onFlip,
+  onTest,
+  onBookmarkToggle
 }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<FlashcardMedia | null>(null);
+  const [bookmarked, setBookmarked] = useState(isBookmarked);
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
@@ -43,6 +53,20 @@ export default function Flashcard({
 
   const closeZoom = () => {
     setZoomedImage(null);
+  };
+
+  const handleTestClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card flip when clicking Test button
+    onTest?.();
+  };
+
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card flip when clicking Bookmark button
+    if (flashcardId && onBookmarkToggle) {
+      const newBookmarkedState = !bookmarked;
+      setBookmarked(newBookmarkedState);
+      onBookmarkToggle(flashcardId, newBookmarkedState);
+    }
   };
 
   // Handle ESC key to close zoom
@@ -140,9 +164,42 @@ export default function Flashcard({
           }}
         >
           <CardContent className="flex flex-col h-full p-8">
-            <div className="flex-shrink-0 text-center">
-              <div className="text-sm font-semibold text-purple-200 mb-4">
-                ANSWER
+            <div className="flex-shrink-0 flex items-center justify-between mb-4">
+              <div className="flex-1 text-center">
+                <div className="text-sm font-semibold text-purple-200">
+                  ANSWER
+                </div>
+              </div>
+              {/* Action Buttons - Top Right Corner */}
+              <div className="flex items-center gap-2">
+                {/* Bookmark Button */}
+                {flashcardId && onBookmarkToggle && (
+                  <Button
+                    onClick={handleBookmarkClick}
+                    variant="ghost"
+                    size="sm"
+                    className="text-purple-200 hover:text-white hover:bg-purple-800/50 transition-colors"
+                    title={bookmarked ? "Remove bookmark" : "Add bookmark"}
+                  >
+                    {bookmarked ? (
+                      <BookmarkCheck className="w-4 h-4" />
+                    ) : (
+                      <Bookmark className="w-4 h-4" />
+                    )}
+                  </Button>
+                )}
+                {/* Test Button */}
+                {onTest && (
+                  <Button
+                    onClick={handleTestClick}
+                    variant="ghost"
+                    size="sm"
+                    className="text-purple-200 hover:text-white hover:bg-purple-800/50 transition-colors"
+                  >
+                    <TestTube className="w-4 h-4 mr-2" />
+                    Test
+                  </Button>
+                )}
               </div>
             </div>
 

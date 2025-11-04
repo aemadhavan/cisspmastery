@@ -134,6 +134,22 @@ export const flashcardMedia = pgTable('flashcard_media', {
 // USERS CONSUME CARDS & TRACK PROGRESS
 // ============================================
 
+// Bookmarked flashcards table - Tracks user's bookmarked cards
+// ✅ USERS BOOKMARK CARDS FOR QUICK ACCESS
+export const bookmarkedFlashcards = pgTable('bookmarked_flashcards', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  clerkUserId: varchar('clerk_user_id', { length: 255 }).notNull().references(() => users.clerkUserId, { onDelete: 'cascade' }),
+  flashcardId: uuid('flashcard_id').notNull().references(() => flashcards.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  // Composite unique index to prevent duplicate bookmarks
+  userFlashcardUnique: index('idx_bookmarked_unique').on(table.clerkUserId, table.flashcardId),
+  // Index for querying all bookmarks for a user
+  userIdx: index('idx_bookmarked_user').on(table.clerkUserId),
+  // Index for checking if a specific card is bookmarked
+  flashcardIdx: index('idx_bookmarked_flashcard').on(table.flashcardId),
+}));
+
 // User card progress table - Tracks individual card mastery per user
 // ✅ USERS TRACK THEIR PROGRESS
 export const userCardProgress = pgTable('user_card_progress', {
@@ -237,6 +253,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   subscription: one(subscriptions),
   payments: many(payments),
   cardProgress: many(userCardProgress),
+  bookmarkedFlashcards: many(bookmarkedFlashcards),
   studySessions: many(studySessions),
   deckProgress: many(deckProgress),
   classProgress: many(classProgress),
@@ -287,6 +304,7 @@ export const flashcardsRelations = relations(flashcards, ({ one, many }) => ({
     references: [users.clerkUserId],
   }),
   userProgress: many(userCardProgress),
+  bookmarkedBy: many(bookmarkedFlashcards),
   sessionCards: many(sessionCards),
   media: many(flashcardMedia),
 }));
@@ -358,5 +376,16 @@ export const userStatsRelations = relations(userStats, ({ one }) => ({
   user: one(users, {
     fields: [userStats.clerkUserId],
     references: [users.clerkUserId],
+  }),
+}));
+
+export const bookmarkedFlashcardsRelations = relations(bookmarkedFlashcards, ({ one }) => ({
+  user: one(users, {
+    fields: [bookmarkedFlashcards.clerkUserId],
+    references: [users.clerkUserId],
+  }),
+  flashcard: one(flashcards, {
+    fields: [bookmarkedFlashcards.flashcardId],
+    references: [flashcards.id],
   }),
 }));

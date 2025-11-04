@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { classes, userCardProgress, flashcards, decks, userStats } from "@/lib/db/schema";
 import { eq, and, sql, asc, inArray } from "drizzle-orm";
-import { Play, BookOpen, FileText, Lightbulb, Flame } from "lucide-react";
+import { Play, BookOpen, FileText, Lightbulb, Flame, Bookmark } from "lucide-react";
 
 const getColorClass = (color: string | null) => {
   const colorMap: { [key: string]: string } = {
@@ -212,6 +212,12 @@ export default async function DashboardPage() {
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start">
                     <Play className="mr-2 h-4 w-4" />
                     Start New Session
+                  </Button>
+                </Link>
+                <Link href="/dashboard/bookmarks" className="block">
+                  <Button variant="outline" className="w-full border-purple-600 text-purple-400 hover:bg-purple-500/10 justify-start">
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    My Bookmarks
                   </Button>
                 </Link>
                 <Link href="/dashboard/practice" className="block">
