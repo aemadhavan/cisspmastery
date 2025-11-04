@@ -3,12 +3,53 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import BuyNowButton from "@/components/BuyNowButton";
+import { Suspense } from "react";
 
-export default async function Home() {
+// Separate component for auth-dependent content
+async function AuthDependentContent() {
   const { has } = await auth();
-
-  // Check if user has paid subscription using Clerk Billing has() method
   const hasPaidPlan = has ? has({ plan: 'paid' }) : false;
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-4">
+      {hasPaidPlan ? (
+        <Link
+          href="/dashboard"
+          className="group bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold px-8 py-4 rounded-full transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          Go to Dashboard
+          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+        </Link>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-gray-400 text-2xl line-through">$120</span>
+            <span className="text-amber-400 text-4xl font-bold">$60 USD</span>
+          </div>
+          <BuyNowButton
+            priceId={process.env.STRIPE_LIFETIME_PRICE_ID!}
+            text="BUY NOW - Limited Time Offer"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Fallback loading state
+function CTAPlaceholder() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <span className="text-gray-400 text-2xl line-through">$120</span>
+        <span className="text-amber-400 text-4xl font-bold">$60 USD</span>
+      </div>
+      <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold px-8 py-4 rounded-full animate-pulse h-14 w-64" />
+    </div>
+  );
+}
+
+export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Hero Section */}
@@ -26,28 +67,9 @@ export default async function Home() {
               First-attempt CISSP success isn&apos;t about memorization — My battle-tested notes show you how to think like a certified pro. Lock in yearly access at $0.17/day before this deal expires
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              {hasPaidPlan ? (
-                <Link
-                  href="/dashboard"
-                  className="group bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold px-8 py-4 rounded-full transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  Go to Dashboard
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-400 text-2xl line-through">$120</span>
-                    <span className="text-amber-400 text-4xl font-bold">$60 USD</span>
-                  </div>
-                  <BuyNowButton
-                    priceId={process.env.STRIPE_LIFETIME_PRICE_ID!}
-                    text="BUY NOW - Limited Time Offer"
-                  />
-                </div>
-              )}
-            </div>
+            <Suspense fallback={<CTAPlaceholder />}>
+              <AuthDependentContent />
+            </Suspense>
 
             {/* <div className="flex flex-col sm:flex-row gap-4">
               <Link
@@ -83,7 +105,9 @@ export default async function Home() {
                 fill
                 className="object-cover"
                 priority
+                fetchPriority="high"
                 sizes="(max-width: 768px) 100vw, 50vw"
+                quality={85}
               />
               {/* Badge Overlay */}
               <div className="absolute top-6 left-6 bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">
@@ -93,21 +117,21 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Features Section */}
+        {/* Features Section - Reduced backdrop-blur for better performance */}
         <div className="mt-24 grid md:grid-cols-3 gap-8">
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:bg-slate-800/70 transition-all">
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:bg-slate-800/70 transition-colors">
             <div className="text-purple-400 text-4xl font-bold mb-3">8</div>
             <h3 className="text-white font-semibold text-lg mb-2">CISSP Domains</h3>
             <p className="text-gray-400">Complete coverage of all security domains</p>
           </div>
 
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:bg-slate-800/70 transition-all">
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:bg-slate-800/70 transition-colors">
             <div className="text-purple-400 text-4xl font-bold mb-3">1000+</div>
             <h3 className="text-white font-semibold text-lg mb-2">Practice Questions</h3>
             <p className="text-gray-400">Confidence-based learning system</p>
           </div>
 
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:bg-slate-800/70 transition-all">
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:bg-slate-800/70 transition-colors">
             <div className="text-purple-400 text-4xl font-bold mb-3">24/7</div>
             <h3 className="text-white font-semibold text-lg mb-2">Study Anywhere</h3>
             <p className="text-gray-400">Mobile-friendly adaptive learning</p>

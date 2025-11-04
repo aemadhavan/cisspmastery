@@ -25,6 +25,15 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
+        <head>
+          {/* Preload hero image for faster LCP */}
+          <link
+            rel="preload"
+            as="image"
+            href="/images/raju.jpg"
+            fetchPriority="high"
+          />
+        </head>
         <body
           className={`${inter.className} antialiased`}
           suppressHydrationWarning
