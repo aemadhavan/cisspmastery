@@ -31,9 +31,11 @@ type StudyMode = "progressive" | "random";
 interface ClassDetailClientProps {
   classData: ClassData;
   isAdmin: boolean;
+  userName: string;
+  daysLeft: number | null;
 }
 
-export default function ClassDetailClient({ classData }: ClassDetailClientProps) {
+export default function ClassDetailClient({ classData, userName, daysLeft }: ClassDetailClientProps) {
   const [studyMode, setStudyMode] = useState<StudyMode>("progressive");
   const [selectedDecks, setSelectedDecks] = useState<Set<string>>(new Set());
   const [showModeInfo, setShowModeInfo] = useState(false);
@@ -76,9 +78,15 @@ export default function ClassDetailClient({ classData }: ClassDetailClientProps)
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Class Header */}
       <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
           {classData.name}
         </h1>
+        {daysLeft !== null && (
+          <p className="text-lg text-gray-300 mb-4">
+            Hi, <span className="text-purple-400 font-semibold">{userName}</span>, you have{' '}
+            <span className="text-blue-400 font-bold">{daysLeft}</span> days left
+          </p>
+        )}
 
         {/* Overall Progress Card */}
         <Card className="bg-slate-800/50 border-slate-700 mb-6">
@@ -88,7 +96,7 @@ export default function ClassDetailClient({ classData }: ClassDetailClientProps)
               <span className="text-2xl font-bold text-blue-400">{overallProgress}%</span>
             </div>
             <Progress value={overallProgress} className="h-3 mb-2" />
-            <p className="text-sm text-gray-400">
+            <p className="text-sm font-semibold text-white bg-blue-600 px-3 py-1.5 rounded-md inline-block">
               {totalStudied} of {totalCards} unique cards studied
             </p>
           </CardContent>

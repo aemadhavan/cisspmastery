@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { ArrowLeft, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import Flashcard from "@/components/Flashcard";
 import ConfidenceRating from "@/components/ConfidenceRating";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
@@ -143,6 +143,20 @@ export default function DeckStudyPage() {
 
   const handleTest = () => {
     toast.info("Test feature coming soon! This will allow you to test your knowledge with practice questions.");
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setShowRating(false);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentIndex < flashcards.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setShowRating(false);
+    }
   };
 
   const handleBookmarkToggle = async (flashcardId: string, isBookmarked: boolean) => {
@@ -298,31 +312,58 @@ export default function DeckStudyPage() {
         {/* Flashcard or Completion */}
         {!allCardsStudied ? (
           <div className="space-y-8">
-            {/* Flashcard */}
-            <Flashcard
-              key={currentCard.id}
-              flashcardId={currentCard.id}
-              question={currentCard.question}
-              answer={currentCard.answer}
-              isBookmarked={bookmarkedCards.has(currentCard.id)}
-              questionImages={currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order).map(m => ({
-                id: m.id,
-                url: m.fileUrl,
-                altText: m.altText,
-                placement: m.placement,
-                order: m.order
-              }))}
-              answerImages={currentCard.media?.filter(m => m.placement === 'answer').sort((a, b) => a.order - b.order).map(m => ({
-                id: m.id,
-                url: m.fileUrl,
-                altText: m.altText,
-                placement: m.placement,
-                order: m.order
-              }))}
-              onFlip={handleFlip}
-              onTest={handleTest}
-              onBookmarkToggle={handleBookmarkToggle}
-            />
+            {/* Navigation buttons and Flashcard */}
+            <div className="flex items-center gap-4 max-w-3xl mx-auto">
+              {/* Previous Button */}
+              <Button
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+                variant="outline"
+                size="icon"
+                className="flex-shrink-0 h-12 w-12 rounded-full bg-slate-800 border-2 border-slate-600 text-white hover:bg-slate-700 hover:border-slate-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+              >
+                <ChevronLeft className="w-6 h-6 text-white" />
+              </Button>
+
+              {/* Flashcard */}
+              <div className="flex-1">
+                <Flashcard
+                  key={currentCard.id}
+                  flashcardId={currentCard.id}
+                  question={currentCard.question}
+                  answer={currentCard.answer}
+                  isBookmarked={bookmarkedCards.has(currentCard.id)}
+                  questionImages={currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order).map(m => ({
+                    id: m.id,
+                    url: m.fileUrl,
+                    altText: m.altText,
+                    placement: m.placement,
+                    order: m.order
+                  }))}
+                  answerImages={currentCard.media?.filter(m => m.placement === 'answer').sort((a, b) => a.order - b.order).map(m => ({
+                    id: m.id,
+                    url: m.fileUrl,
+                    altText: m.altText,
+                    placement: m.placement,
+                    order: m.order
+                  }))}
+                  onFlip={handleFlip}
+                  onTest={handleTest}
+                  onBookmarkToggle={handleBookmarkToggle}
+                />
+              </div>
+
+              {/* Next Button */}
+              <Button
+                onClick={handleNext}
+                disabled={currentIndex === flashcards.length - 1}
+                variant="outline"
+                size="icon"
+                className="flex-shrink-0 h-12 w-12 rounded-full bg-slate-800 border-2 border-slate-600 text-white hover:bg-slate-700 hover:border-slate-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+              >
+                <ChevronRight className="w-6 h-6 text-white" />
+              </Button>
+            </div>
 
             {/* Confidence Rating */}
             {showRating && (

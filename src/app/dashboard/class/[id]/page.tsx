@@ -7,6 +7,9 @@ import { ArrowLeft } from "lucide-react";
 import { getClassWithProgress } from "@/lib/api/class-server";
 import ClassDetailClient from "@/components/ClassDetailClient";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
+import { db } from "@/lib/db";
+import { subscriptions } from "@/lib/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 // Generate dynamic metadata for SEO
 export async function generateMetadata({
@@ -58,6 +61,54 @@ export default async function ClassDetailPage({
   // Check if user is admin
   const isAdmin = user?.publicMetadata?.role === "admin";
 
+  // Fetch user subscription to calculate remaining days
+  let daysLeft: number | null = null;
+
+  try {
+    // First, check ALL subscriptions for this user (for debugging)
+    const allUserSubscriptions = await db.query.subscriptions.findMany({
+      where: eq(subscriptions.clerkUserId, userId),
+      orderBy: [desc(subscriptions.createdAt)]
+    });
+
+    console.log(`[Subscription Debug] User ID: ${userId}`);
+    console.log(`[Subscription Debug] Total subscriptions found: ${allUserSubscriptions.length}`);
+    if (allUserSubscriptions.length > 0) {
+      allUserSubscriptions.forEach((sub, index) => {
+        console.log(`[Subscription Debug] Sub ${index + 1}: Status='${sub.status}', CreatedAt='${sub.createdAt}', ID='${sub.id}'`);
+      });
+    }
+
+    // Now get the active one
+    const subscription = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.clerkUserId, userId),
+        eq(subscriptions.status, 'active')
+      ),
+      orderBy: [desc(subscriptions.createdAt)]
+    });
+
+    // Calculate remaining days from subscription creation date (365 days total)
+    if (subscription?.createdAt) {
+      const startDate = new Date(subscription.createdAt);
+      const today = new Date();
+      const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      daysLeft = Math.max(0, 365 - daysSinceStart);
+
+      // Debug logging to verify calculation
+      console.log(`[Days Calculation] Start: ${startDate.toISOString()}, Today: ${today.toISOString()}, Days Since Start: ${daysSinceStart}, Days Left: ${daysLeft}`);
+    } else {
+      console.log('[Days Calculation] No active subscription found');
+    }
+  } catch (error) {
+    console.error('[Subscription Error] Failed to fetch subscription:', error);
+    // Continue without subscription info - page will still work
+    daysLeft = null;
+  }
+
+  // Get user's first name
+  const userName = user?.firstName || user?.username || "there";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Performance Monitoring */}
@@ -76,7 +127,12 @@ export default async function ClassDetailPage({
       </div>
 
       {/* Client Component with Interactive Features */}
-      <ClassDetailClient classData={classData} isAdmin={isAdmin} />
+      <ClassDetailClient
+        classData={classData}
+        isAdmin={isAdmin}
+        userName={userName}
+        daysLeft={daysLeft}
+      />
     </div>
   );
 }

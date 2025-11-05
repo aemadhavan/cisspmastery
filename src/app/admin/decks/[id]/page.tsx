@@ -66,8 +66,6 @@ interface ImageUpload {
   isExisting?: boolean; // true if loaded from database
 }
 
-type EditorMode = "simple" | "advanced" | "source";
-
 export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [deckId, setDeckId] = useState<string | null>(null);
@@ -79,7 +77,6 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
   const [deletingCard, setDeletingCard] = useState<Flashcard | null>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "edit" | "browse">("edit");
-  const [editorMode, setEditorMode] = useState<EditorMode>("simple");
   const [formData, setFormData] = useState<FlashcardFormData>({
     question: "",
     answer: "",
@@ -426,55 +423,6 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
 
         {activeTab === "edit" && (
           <div className="max-w-6xl mx-auto">
-            {/* Editor Mode Tabs */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEditorMode("simple")}
-                  className={`px-4 py-2 text-sm font-medium rounded ${
-                    editorMode === "simple"
-                      ? "bg-blue-500 text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-300"
-                  }`}
-                >
-                  simple
-                </button>
-                <button
-                  onClick={() => setEditorMode("advanced")}
-                  className={`px-4 py-2 text-sm font-medium rounded ${
-                    editorMode === "advanced"
-                      ? "bg-blue-500 text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-300"
-                  }`}
-                >
-                  advanced
-                </button>
-                <button
-                  onClick={() => setEditorMode("source")}
-                  className={`px-4 py-2 text-sm font-medium rounded ${
-                    editorMode === "source"
-                      ? "bg-blue-500 text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-300"
-                  }`}
-                >
-                  source
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Bulk Add
-                </Button>
-                <Button variant="outline" size="sm">
-                  <ImageIcon className="w-4 h-4 mr-2" />
-                  Import
-                </Button>
-                <Button variant="outline" size="sm">
-                  Quick Tips
-                </Button>
-              </div>
-            </div>
 
             {/* Flashcards List */}
             {flashcards.length === 0 ? (
@@ -521,9 +469,6 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                                       <ImageIcon className="w-6 h-6 text-slate-400" />
                                     </button>
                                   ))}
-                                  <button className="w-16 h-16 bg-slate-50 rounded border-2 border-dashed border-slate-300 flex items-center justify-center hover:bg-slate-100">
-                                    <Plus className="w-6 h-6 text-slate-400" />
-                                  </button>
                                 </div>
                               )}
                             </div>
@@ -546,9 +491,6 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                                       <ImageIcon className="w-6 h-6 text-slate-400" />
                                     </button>
                                   ))}
-                                  <button className="w-16 h-16 bg-slate-50 rounded border-2 border-dashed border-slate-300 flex items-center justify-center hover:bg-slate-100">
-                                    <Plus className="w-6 h-6 text-slate-400" />
-                                  </button>
                                 </div>
                               )}
                             </div>
@@ -718,17 +660,6 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                   </div>
                 )}
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="explanation" className="text-base font-semibold">Explanation (Optional)</Label>
-              <Textarea
-                id="explanation"
-                value={formData.explanation}
-                onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
-                placeholder="Add additional context or explanation..."
-                className="bg-white border-slate-300 text-slate-900 min-h-[100px]"
-              />
             </div>
 
             <div className="space-y-3">

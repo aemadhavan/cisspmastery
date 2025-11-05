@@ -55,6 +55,7 @@ export const getClassWithProgress = reactCache(async (classId: string): Promise<
   console.log(`[Cache MISS] Fetching class ${classId} from database`);
 
   // OPTIMIZATION: Fetch class data and prepare for progress query in parallel
+  // Load only flashcard IDs to reduce memory usage (avoid loading full question/answer text)
   const classData = await db.query.classes.findFirst({
     where: eq(classes.id, classId),
     with: {
@@ -64,6 +65,9 @@ export const getClassWithProgress = reactCache(async (classId: string): Promise<
         with: {
           flashcards: {
             where: eq(flashcards.isPublished, true),
+            columns: {
+              id: true, // Only load ID column to minimize memory
+            },
           },
         },
       },

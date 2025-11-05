@@ -36,6 +36,7 @@ export default async function DashboardPage() {
   const userName = user?.firstName || "there";
 
   // Fetch all classes with their decks and flashcards
+  // OPTIMIZATION: Only load flashcard IDs to reduce memory usage
   const allClasses = await db.query.classes.findMany({
     where: eq(classes.isPublished, true),
     orderBy: [asc(classes.order)],
@@ -46,6 +47,9 @@ export default async function DashboardPage() {
         with: {
           flashcards: {
             where: eq(flashcards.isPublished, true),
+            columns: {
+              id: true, // Only load ID to minimize memory usage
+            },
           },
         },
       },
