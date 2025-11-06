@@ -17,14 +17,95 @@ const client = postgres(connectionString, {
   max: 5, // Increased slightly from 2 to handle concurrent requests better
   idle_timeout: 20, // Release idle connections after 20 seconds
   max_lifetime: 60 * 5, // 5 minutes max lifetime
-  connect_timeout: 10, // Connection timeout (10 seconds)
+  connect_timeout: 30, // Connection timeout increased to 30 seconds for cold starts
+  timeout: 25, // Query timeout (25 seconds) to prevent long-running queries
   fetch_types: false, // Disable type fetching to reduce memory
   onnotice: () => {}, // Suppress notices
+  connection: {
+    application_name: 'cisspmastery', // Add application name for better monitoring
+  },
 });
 
 // Drizzle instance optimized for PostgreSQL
 // Works seamlessly with Xata.io, Vercel Postgres, Neon, or any PostgreSQL compatible service
 export const db = drizzle(client, { schema });
+
+/**
+ * Retry wrapper for database queries to handle transient connection errors
+ * @param fn - The database query function to execute
+ * @param options - Configuration options
+ * @returns The result of the database query
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    delayMs?: number;
+    queryName?: string;
+  } = {}
+): Promise<T> {
+  const { maxRetries = 3, delayMs = 1000, queryName = 'unknown-query' } = options;
+
+  let lastError: Error | unknown;
+  const startTime = Date.now();
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const attemptStartTime = Date.now();
+
+    try {
+      const result = await fn();
+
+      // Log successful query metrics
+      const duration = Date.now() - startTime;
+      const attemptDuration = Date.now() - attemptStartTime;
+
+      if (attempt > 1 || duration > 5000) {
+        console.log(`[DB Success] "${queryName}" completed in ${duration}ms (attempt ${attempt}/${maxRetries}, last attempt: ${attemptDuration}ms)`);
+      }
+
+      return result;
+    } catch (error) {
+      lastError = error;
+      const err = error as Error & { code?: string };
+      const attemptDuration = Date.now() - attemptStartTime;
+
+      // Log detailed error information
+      console.error(`[DB Error] Attempt ${attempt}/${maxRetries} for "${queryName}" failed after ${attemptDuration}ms:`, {
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        errorType: err?.constructor?.name,
+      });
+
+      // Check if error is retryable (connection/timeout errors)
+      const isRetryable =
+        err?.code === 'ECONNREFUSED' ||
+        err?.code === 'ETIMEDOUT' ||
+        err?.code === 'ENOTFOUND' ||
+        err?.code === 'ECONNRESET' ||
+        err?.message?.includes('CONNECT_TIMEOUT') ||
+        err?.message?.includes('Connection terminated') ||
+        err?.message?.includes('Connection closed') ||
+        err?.message?.includes('timeout');
+
+      // Don't retry if it's not a connection error or if we've exhausted retries
+      if (!isRetryable || attempt === maxRetries) {
+        const totalDuration = Date.now() - startTime;
+        console.error(`[DB Failed] "${queryName}" failed permanently after ${totalDuration}ms and ${attempt} attempts:`, {
+          finalError: err?.message,
+          isRetryable,
+        });
+        throw error;
+      }
+
+      // Exponential backoff
+      const delay = delayMs * attempt;
+      console.warn(`[DB Retry] Retrying "${queryName}" in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
 
 // Export types
 export type User = typeof schema.users.$inferSelect;
