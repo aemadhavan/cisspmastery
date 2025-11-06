@@ -7,6 +7,8 @@ export const planTypeEnum = pgEnum('plan_type', ['free', 'pro_monthly', 'pro_yea
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'canceled', 'past_due', 'trialing', 'inactive']);
 export const masteryStatusEnum = pgEnum('mastery_status', ['new', 'learning', 'mastered']);
 export const paymentStatusEnum = pgEnum('payment_status', ['succeeded', 'failed', 'pending']);
+export const testTypeEnum = pgEnum('test_type', ['flashcard', 'deck', 'random']);
+export const testStatusEnum = pgEnum('test_status', ['not_started', 'in_progress', 'completed', 'abandoned']);
 
 // ============================================
 // AUTHENTICATION & BILLING TABLES
@@ -258,10 +260,13 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   deckProgress: many(deckProgress),
   classProgress: many(classProgress),
   stats: one(userStats),
+  testAttempts: many(testAttempts),
   // Admin relations
   createdClasses: many(classes),
   createdDecks: many(decks),
   createdFlashcards: many(flashcards),
+  createdTestQuestions: many(testQuestions),
+  createdDeckTests: many(deckTests),
 }));
 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
@@ -292,6 +297,7 @@ export const decksRelations = relations(decks, ({ one, many }) => ({
   flashcards: many(flashcards),
   studySessions: many(studySessions),
   deckProgress: many(deckProgress),
+  deckTests: many(deckTests),
 }));
 
 export const flashcardsRelations = relations(flashcards, ({ one, many }) => ({
@@ -307,6 +313,8 @@ export const flashcardsRelations = relations(flashcards, ({ one, many }) => ({
   bookmarkedBy: many(bookmarkedFlashcards),
   sessionCards: many(sessionCards),
   media: many(flashcardMedia),
+  testQuestions: many(testQuestions),
+  testAttempts: many(testAttempts),
 }));
 
 export const flashcardMediaRelations = relations(flashcardMedia, ({ one }) => ({
@@ -387,5 +395,181 @@ export const bookmarkedFlashcardsRelations = relations(bookmarkedFlashcards, ({ 
   flashcard: one(flashcards, {
     fields: [bookmarkedFlashcards.flashcardId],
     references: [flashcards.id],
+  }),
+}));
+
+// ============================================
+// TESTING & QUIZ SYSTEM
+// ADMIN CREATES TESTS / USERS TAKE TESTS
+// ============================================
+
+// Test Questions table - Multiple choice questions for flashcards
+// ✅ ADMIN CREATES ONLY (JSON upload or manual creation)
+export const testQuestions = pgTable('test_questions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  flashcardId: uuid('flashcard_id').notNull().references(() => flashcards.id, { onDelete: 'cascade' }),
+  question: text('question').notNull(), // Can differ from flashcard question for variety
+  choices: text('choices').array().notNull(), // Array of 2-6 choices
+  correctAnswers: integer('correct_answers').array().notNull(), // Array of correct answer indices (0-based)
+  explanation: text('explanation'), // Why the answer is correct
+  pointValue: integer('point_value').notNull().default(1), // Points for this question
+  timeLimit: integer('time_limit'), // Optional time limit in seconds
+  difficulty: integer('difficulty'), // 1-5 difficulty rating
+  order: integer('order').notNull().default(0),
+  isActive: boolean('is_active').default(true), // Admins can disable questions
+  createdBy: varchar('created_by', { length: 255 }).notNull().references(() => users.clerkUserId),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  flashcardIdx: index('idx_test_questions_flashcard').on(table.flashcardId),
+  activeIdx: index('idx_test_questions_active').on(table.isActive),
+}));
+
+// Deck Tests table - Aggregated tests for entire decks
+// ✅ ADMIN CREATES ONLY
+export const deckTests = pgTable('deck_tests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  deckId: uuid('deck_id').notNull().references(() => decks.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  testType: testTypeEnum('test_type').notNull().default('deck'), // flashcard, deck, or random
+  questionCount: integer('question_count'), // null = all questions, else random subset
+  timeLimit: integer('time_limit'), // Total time limit in seconds (null = no limit)
+  passingScore: integer('passing_score').notNull().default(70), // Percentage required to pass
+  shuffleQuestions: boolean('shuffle_questions').default(true),
+  shuffleChoices: boolean('shuffle_choices').default(true),
+  showCorrectAnswers: boolean('show_correct_answers').default(true), // Show after submission
+  allowRetakes: boolean('allow_retakes').default(true),
+  maxAttempts: integer('max_attempts'), // null = unlimited
+  isPremium: boolean('is_premium').default(false), // Requires Pro subscription
+  isPublished: boolean('is_published').default(true),
+  createdBy: varchar('created_by', { length: 255 }).notNull().references(() => users.clerkUserId),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  deckPublishedIdx: index('idx_deck_tests_deck_published').on(table.deckId, table.isPublished),
+}));
+
+// Test Attempts table - User test sessions
+// ✅ USERS TAKE TESTS
+export const testAttempts = pgTable('test_attempts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  clerkUserId: varchar('clerk_user_id', { length: 255 }).notNull().references(() => users.clerkUserId, { onDelete: 'cascade' }),
+  deckTestId: uuid('deck_test_id').references(() => deckTests.id, { onDelete: 'set null' }), // null for single flashcard tests
+  flashcardId: uuid('flashcard_id').references(() => flashcards.id, { onDelete: 'set null' }), // For single flashcard tests
+  testType: testTypeEnum('test_type').notNull(),
+  status: testStatusEnum('status').notNull().default('not_started'),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  abandonedAt: timestamp('abandoned_at'),
+  totalQuestions: integer('total_questions').notNull(),
+  questionsAnswered: integer('questions_answered').default(0),
+  correctAnswers: integer('correct_answers').default(0),
+  score: decimal('score', { precision: 5, scale: 2 }), // Percentage score
+  passed: boolean('passed'), // Based on passing score threshold
+  timeSpent: integer('time_spent'), // in seconds
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userTestIdx: index('idx_test_attempts_user_test').on(table.clerkUserId, table.deckTestId),
+  userStatusIdx: index('idx_test_attempts_user_status').on(table.clerkUserId, table.status),
+  startedAtIdx: index('idx_test_attempts_started').on(table.startedAt),
+}));
+
+// Test Answers table - Individual answers within test attempts
+// ✅ USERS ANSWER QUESTIONS
+export const testAnswers = pgTable('test_answers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  attemptId: uuid('attempt_id').notNull().references(() => testAttempts.id, { onDelete: 'cascade' }),
+  testQuestionId: uuid('test_question_id').notNull().references(() => testQuestions.id, { onDelete: 'cascade' }),
+  selectedAnswers: integer('selected_answers').array().notNull(), // User's selected answer indices
+  isCorrect: boolean('is_correct').notNull(),
+  pointsEarned: integer('points_earned').notNull().default(0),
+  timeSpent: integer('time_spent'), // Time spent on this question in seconds
+  markedForReview: boolean('marked_for_review').default(false),
+  answeredAt: timestamp('answered_at').defaultNow().notNull(),
+}, (table) => ({
+  attemptIdx: index('idx_test_answers_attempt').on(table.attemptId),
+  questionIdx: index('idx_test_answers_question').on(table.testQuestionId),
+}));
+
+// Test Question Pool - Links test questions to deck tests
+// Allows flexible question selection for tests
+export const testQuestionPool = pgTable('test_question_pool', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  deckTestId: uuid('deck_test_id').notNull().references(() => deckTests.id, { onDelete: 'cascade' }),
+  testQuestionId: uuid('test_question_id').notNull().references(() => testQuestions.id, { onDelete: 'cascade' }),
+  order: integer('order').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  deckTestIdx: index('idx_test_pool_deck_test').on(table.deckTestId),
+  questionIdx: index('idx_test_pool_question').on(table.testQuestionId),
+}));
+
+// ============================================
+// TEST RELATIONS
+// ============================================
+
+export const testQuestionsRelations = relations(testQuestions, ({ one, many }) => ({
+  flashcard: one(flashcards, {
+    fields: [testQuestions.flashcardId],
+    references: [flashcards.id],
+  }),
+  createdBy: one(users, {
+    fields: [testQuestions.createdBy],
+    references: [users.clerkUserId],
+  }),
+  testAnswers: many(testAnswers),
+  questionPools: many(testQuestionPool),
+}));
+
+export const deckTestsRelations = relations(deckTests, ({ one, many }) => ({
+  deck: one(decks, {
+    fields: [deckTests.deckId],
+    references: [decks.id],
+  }),
+  createdBy: one(users, {
+    fields: [deckTests.createdBy],
+    references: [users.clerkUserId],
+  }),
+  attempts: many(testAttempts),
+  questionPool: many(testQuestionPool),
+}));
+
+export const testAttemptsRelations = relations(testAttempts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [testAttempts.clerkUserId],
+    references: [users.clerkUserId],
+  }),
+  deckTest: one(deckTests, {
+    fields: [testAttempts.deckTestId],
+    references: [deckTests.id],
+  }),
+  flashcard: one(flashcards, {
+    fields: [testAttempts.flashcardId],
+    references: [flashcards.id],
+  }),
+  answers: many(testAnswers),
+}));
+
+export const testAnswersRelations = relations(testAnswers, ({ one }) => ({
+  attempt: one(testAttempts, {
+    fields: [testAnswers.attemptId],
+    references: [testAttempts.id],
+  }),
+  testQuestion: one(testQuestions, {
+    fields: [testAnswers.testQuestionId],
+    references: [testQuestions.id],
+  }),
+}));
+
+export const testQuestionPoolRelations = relations(testQuestionPool, ({ one }) => ({
+  deckTest: one(deckTests, {
+    fields: [testQuestionPool.deckTestId],
+    references: [deckTests.id],
+  }),
+  testQuestion: one(testQuestions, {
+    fields: [testQuestionPool.testQuestionId],
+    references: [testQuestions.id],
   }),
 }));
