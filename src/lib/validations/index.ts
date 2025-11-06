@@ -10,3 +10,4 @@ export * from './class';
 export * from './deck';
 export * from './flashcard';
 export * from './user';
+export * from './test';
