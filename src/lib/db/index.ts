@@ -22,8 +22,7 @@ const client = postgres(effectiveConnectionString!, {
   max: 5, // Increased slightly from 2 to handle concurrent requests better
   idle_timeout: 20, // Release idle connections after 20 seconds
   max_lifetime: 60 * 5, // 5 minutes max lifetime
-  connect_timeout: 30, // Connection timeout increased to 30 seconds for cold starts
-  timeout: 25, // Query timeout (25 seconds) to prevent long-running queries
+  connect_timeout: 45, // Connection timeout increased to 45 seconds for cold starts and warmup
   fetch_types: false, // Disable type fetching to reduce memory
   onnotice: () => {}, // Suppress notices
   connection: {
