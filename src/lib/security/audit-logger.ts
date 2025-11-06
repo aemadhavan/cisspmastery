@@ -273,11 +273,11 @@ export class AuditLogger {
   /**
    * Send to SIEM system (placeholder for integration)
    */
-  private sendToSIEM(event: SecurityEvent & { environment: string; application: string }): void {
+  private sendToSIEM(_event: SecurityEvent & { environment: string; application: string }): void {
     // TODO: Integrate with SIEM system (e.g., Splunk, ELK, DataDog)
     // This is a placeholder for future implementation
     if (process.env.SIEM_ENDPOINT) {
-      // Example: fetch(process.env.SIEM_ENDPOINT, { method: 'POST', body: JSON.stringify(event) })
+      // Example: fetch(process.env.SIEM_ENDPOINT, { method: 'POST', body: JSON.stringify(_event) })
       console.log('[SIEM] Event would be sent to:', process.env.SIEM_ENDPOINT);
     }
   }

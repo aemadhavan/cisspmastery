@@ -5,11 +5,16 @@ import { db } from '@/lib/db';
 import { subscriptions, payments } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-10-29.clover',
-});
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+// Lazy initialization to avoid errors during build time
+let stripe: Stripe;
+function getStripe(): Stripe {
+  if (!stripe) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2025-10-29.clover',
+    });
+  }
+  return stripe;
+}
 
 // Helper type for subscription with period fields
 type SubscriptionWithPeriod = Stripe.Subscription & {
@@ -30,9 +35,10 @@ export async function POST(req: Request) {
   }
 
   let event: Stripe.Event;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return NextResponse.json(
@@ -103,7 +109,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       : session.subscription.id;
 
     // Fetch full subscription details from Stripe
-    const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const stripeSubscription = await getStripe().subscriptions.retrieve(subscriptionId);
 
     await handleSubscriptionUpdate(stripeSubscription, clerkUserId, session.customer as string);
   }
@@ -114,7 +120,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       ? session.payment_intent
       : session.payment_intent.id;
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
     await handlePaymentSucceeded(paymentIntent, clerkUserId);
   }
 }

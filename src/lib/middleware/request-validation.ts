@@ -160,7 +160,7 @@ export function validateInput(input: string, options: {
   }
 
   // Sanitize
-  let sanitized = sanitizeString(input);
+  const sanitized = sanitizeString(input);
 
   // Check for injection attempts
   if (checkInjection) {

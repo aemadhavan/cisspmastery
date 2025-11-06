@@ -61,7 +61,7 @@ export function validateEnv(): Env {
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error('[Security] Environment variable validation failed:');
-      error.errors.forEach((err) => {
+      error.issues.forEach((err) => {
         console.error(`  - ${err.path.join('.')}: ${err.message}`);
       });
       throw new Error('Environment variable validation failed');
@@ -252,15 +252,18 @@ export function validateDatabaseUrl(url: string): {
   }
 }
 
-// Run validation on module load (server-side only)
-if (typeof window === 'undefined') {
+// Run validation on module load (server-side only, but not during build)
+// Skip validation during Next.js build process
+const isNextBuild = process.argv.includes('build') || process.env.NEXT_PHASE === 'phase-production-build';
+
+if (typeof window === 'undefined' && !isNextBuild) {
   try {
     validateEnv();
     logEnvConfig();
   } catch (error) {
     console.error('[Security] Failed to validate environment:', error);
     if (process.env.NODE_ENV === 'production') {
-      // In production, fail hard if environment is invalid
+      // In production runtime, fail hard if environment is invalid
       process.exit(1);
     }
   }
