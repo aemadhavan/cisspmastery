@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const diagnostics: any = {
+  const diagnostics: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     uptime: process.uptime(),
@@ -50,11 +50,12 @@ export async function GET(request: Request) {
       connected: true,
       responseTime: Math.round((dbEnd - dbStart) * 100) / 100,
     };
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as Error & { code?: string };
     diagnostics.database = {
       connected: false,
-      error: error?.message,
-      errorCode: error?.code,
+      error: err?.message,
+      errorCode: err?.code,
     };
   }
 
@@ -71,8 +72,9 @@ export async function GET(request: Request) {
         (SELECT max(now() - query_start) FROM pg_stat_activity WHERE datname = current_database() AND state = 'active') as longest_query_duration
     `);
     diagnostics.postgresStats = stats;
-  } catch (error: any) {
-    diagnostics.postgresStatsError = error?.message;
+  } catch (error) {
+    const err = error as Error;
+    diagnostics.postgresStatsError = err?.message;
   }
 
   // Get connection configuration
@@ -102,7 +104,7 @@ export async function GET(request: Request) {
       LIMIT 10
     `);
     diagnostics.slowQueries = slowQueries;
-  } catch (error: any) {
+  } catch {
     // pg_stat_statements might not be available
     diagnostics.slowQueriesNote = 'pg_stat_statements extension not available';
   }
@@ -128,8 +130,9 @@ export async function GET(request: Request) {
       LIMIT 20
     `);
     diagnostics.recentActivity = activity;
-  } catch (error: any) {
-    diagnostics.recentActivityError = error?.message;
+  } catch (error) {
+    const err = error as Error;
+    diagnostics.recentActivityError = err?.message;
   }
 
   // Check for lock waits
@@ -160,8 +163,9 @@ export async function GET(request: Request) {
       LIMIT 10
     `);
     diagnostics.lockWaits = locks;
-  } catch (error: any) {
-    diagnostics.lockWaitsError = error?.message;
+  } catch (error) {
+    const err = error as Error;
+    diagnostics.lockWaitsError = err?.message;
   }
 
   const endTime = performance.now();

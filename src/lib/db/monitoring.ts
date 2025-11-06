@@ -127,11 +127,12 @@ export async function monitoredQuery<T>(
     metrics.duration = metrics.endTime - metrics.startTime;
     logQueryMetrics(metrics);
     return result;
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as Error;
     metrics.success = false;
     metrics.endTime = Date.now();
     metrics.duration = metrics.endTime - metrics.startTime;
-    metrics.error = error?.message || 'Unknown error';
+    metrics.error = err?.message || 'Unknown error';
     logQueryMetrics(metrics);
     throw error;
   }
@@ -164,23 +165,24 @@ export async function monitoredQueryWithRetry<T>(
       metrics.retryCount = attempt - 1;
       logQueryMetrics(metrics);
       return result;
-    } catch (error: any) {
+    } catch (error) {
       lastError = error;
+      const err = error as Error & { code?: string };
 
       // Check if error is retryable
       const isRetryable =
-        error?.code === 'ECONNREFUSED' ||
-        error?.code === 'ETIMEDOUT' ||
-        error?.code === 'ENOTFOUND' ||
-        error?.message?.includes('CONNECT_TIMEOUT') ||
-        error?.message?.includes('Connection terminated') ||
-        error?.message?.includes('Connection closed');
+        err?.code === 'ECONNREFUSED' ||
+        err?.code === 'ETIMEDOUT' ||
+        err?.code === 'ENOTFOUND' ||
+        err?.message?.includes('CONNECT_TIMEOUT') ||
+        err?.message?.includes('Connection terminated') ||
+        err?.message?.includes('Connection closed');
 
       if (!isRetryable || attempt === maxRetries) {
         metrics.success = false;
         metrics.endTime = Date.now();
         metrics.duration = metrics.endTime - metrics.startTime;
-        metrics.error = error?.message || 'Unknown error';
+        metrics.error = err?.message || 'Unknown error';
         metrics.retryCount = attempt - 1;
         logQueryMetrics(metrics);
         throw error;
@@ -190,7 +192,7 @@ export async function monitoredQueryWithRetry<T>(
       const delay = delayMs * attempt;
       console.warn(
         `[DB Monitor] Retry ${attempt}/${maxRetries} for "${queryName}" after ${delay}ms`,
-        { error: error.message }
+        { error: err.message }
       );
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -216,9 +218,10 @@ export async function checkDatabaseHealth() {
     await db.execute(sql`SELECT 1 as health_check`);
     health.connected = true;
     health.responseTime = Date.now() - startTime;
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as Error;
     health.connected = false;
-    health.error = error?.message || 'Unknown error';
+    health.error = err?.message || 'Unknown error';
     health.responseTime = Date.now() - startTime;
   }
 
@@ -229,7 +232,7 @@ export async function checkDatabaseHealth() {
  * Get detailed database diagnostics
  */
 export async function getDatabaseDiagnostics() {
-  const diagnostics: any = {
+  const diagnostics: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
     health: await checkDatabaseHealth(),
     queryStats: getQueryStatistics(),
@@ -264,8 +267,9 @@ export async function getDatabaseDiagnostics() {
         (SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND state = 'idle') as idle_connections
     `);
     diagnostics.postgresStats = stats;
-  } catch (error: any) {
-    diagnostics.postgresStatsError = error?.message;
+  } catch (error) {
+    const err = error as Error;
+    diagnostics.postgresStatsError = err?.message;
   }
 
   return diagnostics;

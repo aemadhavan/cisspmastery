@@ -64,33 +64,34 @@ export async function withRetry<T>(
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       lastError = error;
+      const err = error as Error & { code?: string };
       const attemptDuration = Date.now() - attemptStartTime;
 
       // Log detailed error information
       console.error(`[DB Error] Attempt ${attempt}/${maxRetries} for "${queryName}" failed after ${attemptDuration}ms:`, {
-        errorCode: error?.code,
-        errorMessage: error?.message,
-        errorType: error?.constructor?.name,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        errorType: err?.constructor?.name,
       });
 
       // Check if error is retryable (connection/timeout errors)
       const isRetryable =
-        error?.code === 'ECONNREFUSED' ||
-        error?.code === 'ETIMEDOUT' ||
-        error?.code === 'ENOTFOUND' ||
-        error?.code === 'ECONNRESET' ||
-        error?.message?.includes('CONNECT_TIMEOUT') ||
-        error?.message?.includes('Connection terminated') ||
-        error?.message?.includes('Connection closed') ||
-        error?.message?.includes('timeout');
+        err?.code === 'ECONNREFUSED' ||
+        err?.code === 'ETIMEDOUT' ||
+        err?.code === 'ENOTFOUND' ||
+        err?.code === 'ECONNRESET' ||
+        err?.message?.includes('CONNECT_TIMEOUT') ||
+        err?.message?.includes('Connection terminated') ||
+        err?.message?.includes('Connection closed') ||
+        err?.message?.includes('timeout');
 
       // Don't retry if it's not a connection error or if we've exhausted retries
       if (!isRetryable || attempt === maxRetries) {
         const totalDuration = Date.now() - startTime;
         console.error(`[DB Failed] "${queryName}" failed permanently after ${totalDuration}ms and ${attempt} attempts:`, {
-          finalError: error?.message,
+          finalError: err?.message,
           isRetryable,
         });
         throw error;
