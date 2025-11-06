@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
-import { Home, LayoutDashboard, FileText, BarChart3, BookOpen } from "lucide-react";
+import { Home, LayoutDashboard, FileText, BarChart3, BookOpen, TestTube, ClipboardList } from "lucide-react";
 
 export default async function AdminLayout({
   children,
@@ -31,6 +31,8 @@ export default async function AdminLayout({
     { href: "/admin", label: "Overview", icon: LayoutDashboard },
     { href: "/admin/classes", label: "Classes", icon: BookOpen },
     { href: "/admin/flashcards", label: "Flashcards", icon: FileText },
+    { href: "/admin/test-questions", label: "Test Questions", icon: TestTube },
+    { href: "/admin/deck-tests", label: "Deck Tests", icon: ClipboardList },
     { href: "/admin/analytics", label: "User Analytics", icon: BarChart3 },
   ];
 

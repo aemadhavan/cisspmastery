@@ -141,8 +141,30 @@ export default function DeckStudyPage() {
     console.log('Reset Progress clicked - After: currentIndex set to 0, studiedCards cleared');
   };
 
-  const handleTest = () => {
-    toast.info("Test feature coming soon! This will allow you to test your knowledge with practice questions.");
+  const handleTest = async () => {
+    try {
+      // Fetch available tests for this deck
+      const res = await fetch(`/api/admin/deck-tests?deckId=${deckId}`);
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch tests");
+      }
+
+      const data = await res.json();
+      const tests = data.tests || [];
+
+      if (tests.length === 0) {
+        toast.info("No tests available for this deck yet");
+        return;
+      }
+
+      // Start the first available test
+      const firstTest = tests[0];
+      window.location.href = `/dashboard/tests/${firstTest.id}`;
+    } catch (error) {
+      console.error("Error loading tests:", error);
+      toast.error("Failed to load tests for this deck");
+    }
   };
 
   const handlePrevious = () => {

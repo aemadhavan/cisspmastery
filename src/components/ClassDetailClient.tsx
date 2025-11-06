@@ -2,11 +2,13 @@
 
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Play, Check } from "lucide-react";
+import { Play, Check, FileText } from "lucide-react";
+import { toast } from "sonner";
 import type { ClassData } from "@/lib/api/class-server";
 
 // Lazy load Dialog for better initial bundle size
@@ -36,11 +38,48 @@ interface ClassDetailClientProps {
 }
 
 export default function ClassDetailClient({ classData, userName, daysLeft }: ClassDetailClientProps) {
+  const router = useRouter();
   const [studyMode, setStudyMode] = useState<StudyMode>("progressive");
   const [selectedDecks, setSelectedDecks] = useState<Set<string>>(new Set());
   const [showModeInfo, setShowModeInfo] = useState(false);
+  const [loadingTests, setLoadingTests] = useState<Set<string>>(new Set());
 
   const decks = classData.decks;
+
+  // Handle starting a test for a deck
+  const handleStartTest = useCallback(async (deckId: string) => {
+    setLoadingTests(prev => new Set(prev).add(deckId));
+
+    try {
+      // Fetch available tests for this deck
+      const res = await fetch(`/api/admin/deck-tests?deckId=${deckId}`);
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch tests");
+      }
+
+      const data = await res.json();
+      const tests = data.tests || [];
+
+      if (tests.length === 0) {
+        toast.info("No tests available for this deck yet");
+        return;
+      }
+
+      // Start the first available test
+      const firstTest = tests[0];
+      router.push(`/dashboard/tests/${firstTest.id}`);
+    } catch (error) {
+      console.error("Error loading tests:", error);
+      toast.error("Failed to load tests for this deck");
+    } finally {
+      setLoadingTests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(deckId);
+        return newSet;
+      });
+    }
+  }, [router]);
 
   // Memoized calculations
   const totalCards = useMemo(() => decks.reduce((sum, deck) => sum + deck.cardCount, 0), [decks]);
@@ -229,12 +268,23 @@ export default function ClassDetailClient({ classData, userName, daysLeft }: Cla
                         </p>
                       </div>
 
-                      {/* Quick Play Button */}
-                      <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {/* Action Buttons */}
+                      <div className="flex-shrink-0 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStartTest(deck.id)}
+                          disabled={loadingTests.has(deck.id)}
+                          className="border-purple-500 text-purple-400 hover:bg-purple-500/10 rounded-full h-10 w-10 p-0"
+                          title="Take Test"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
                         <Link href={`/dashboard/deck/${deck.id}?mode=${studyMode}`}>
                           <Button
                             size="sm"
                             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-10 w-10 p-0"
+                            title="Study Deck"
                           >
                             <Play className="w-4 h-4 fill-white" />
                           </Button>
