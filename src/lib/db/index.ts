@@ -4,15 +4,20 @@ import * as schema from './schema';
 
 // Use DATABASE_URL (supports Xata, Neon, Vercel Postgres, or any PostgreSQL)
 // Xata connection string format: postgresql://[workspace]:[api-key]@[region].sql.xata.sh/[database]:[branch]
-const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL!;
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-if (!connectionString) {
+// During Next.js build, we don't need a real database connection
+// Use a dummy connection string for build-time type checking
+const isNextBuild = process.argv.includes('build') || process.env.NEXT_PHASE === 'phase-production-build';
+const effectiveConnectionString = connectionString || (isNextBuild ? 'postgresql://dummy:dummy@localhost:5432/dummy' : '');
+
+if (!effectiveConnectionString && !isNextBuild) {
   throw new Error('DATABASE_URL or POSTGRES_URL environment variable is required');
 }
 
 // Create postgres client with connection pooling for Xata
 // Optimized for Xata free tier memory constraints
-const client = postgres(connectionString, {
+const client = postgres(effectiveConnectionString!, {
   prepare: false,
   max: 5, // Increased slightly from 2 to handle concurrent requests better
   idle_timeout: 20, // Release idle connections after 20 seconds

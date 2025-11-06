@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-const inter = Inter({
-  subsets: ["latin"],
-  display: 'swap', // Use font-display: swap for better FCP
-  preload: true, // Preload the font
-});
+// Note: Using system fonts for better build compatibility
+// If Google Fonts are needed, they can be loaded via CDN in production
 
 export const metadata: Metadata = {
   title: "CISSP Mastery - Master CISSP with Confidence-Based Learning",
@@ -35,7 +31,7 @@ export default function RootLayout({
           />
         </head>
         <body
-          className={`${inter.className} antialiased`}
+          className="font-sans antialiased"
           suppressHydrationWarning
         >
           <Header />
