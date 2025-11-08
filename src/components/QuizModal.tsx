@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, ChevronRight, Award } from "lucide-react";
@@ -35,14 +35,7 @@ export function QuizModal({ isOpen, onClose, flashcardId, flashcardQuestion }: Q
   const [loading, setLoading] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
-  // Fetch quiz questions when modal opens
-  useEffect(() => {
-    if (isOpen && flashcardId) {
-      fetchQuizQuestions();
-    }
-  }, [isOpen, flashcardId]);
-
-  const fetchQuizQuestions = async () => {
+  const fetchQuizQuestions = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/flashcards/${flashcardId}/quiz`);
@@ -65,7 +58,14 @@ export function QuizModal({ isOpen, onClose, flashcardId, flashcardQuestion }: Q
     } finally {
       setLoading(false);
     }
-  };
+  }, [flashcardId, onClose]);
+
+  // Fetch quiz questions when modal opens
+  useEffect(() => {
+    if (isOpen && flashcardId) {
+      fetchQuizQuestions();
+    }
+  }, [isOpen, flashcardId, fetchQuizQuestions]);
 
   const resetQuiz = () => {
     setCurrentQuestionIndex(0);
