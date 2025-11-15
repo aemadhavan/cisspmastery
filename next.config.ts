@@ -143,9 +143,6 @@ const nextConfig: NextConfig = {
   poweredByHeader: false, // Remove X-Powered-By header
   reactStrictMode: true, // Enable React strict mode for better error handling
 
-  // Reduce polyfills for modern browsers to decrease bundle size
-  swcMinify: true, // Use SWC for faster minification
-
   // Optimize output for modern browsers
   transpilePackages: [], // Only transpile what's necessary
 };
