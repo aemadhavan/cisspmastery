@@ -294,7 +294,7 @@ export default function DeckStudyPage() {
             <Button
               onClick={handleReset}
               variant="outline"
-              className="border-purple-500 text-purple-400 hover:bg-purple-500/10"
+              className="border-purple-400 text-purple-200 hover:bg-purple-500/10"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
               Reset Progress
@@ -307,7 +307,7 @@ export default function DeckStudyPage() {
               <span className="text-sm text-gray-400">Progress</span>
               <span className="text-sm text-gray-400">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-2" aria-label="Deck study progress" />
           </div>
         </div>
 
@@ -392,7 +392,7 @@ export default function DeckStudyPage() {
                 Study Again
               </Button>
               <Link href={deck?.classId ? `/dashboard/class/${deck.classId}` : "/dashboard"}>
-                <Button variant="outline" className="border-purple-500 text-purple-400 hover:bg-purple-500/10 w-full sm:w-auto">
+                <Button variant="outline" className="border-purple-400 text-purple-200 hover:bg-purple-500/10 w-full sm:w-auto">
                   Back to {className}
                 </Button>
               </Link>

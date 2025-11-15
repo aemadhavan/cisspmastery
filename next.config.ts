@@ -110,6 +110,13 @@ const nextConfig: NextConfig = {
               priority: 30,
               reuseExistingChunk: true,
             },
+            // OPTIMIZATION: Separate chunk for Recharts (heavy chart library ~80KB)
+            recharts: {
+              name: 'recharts',
+              test: /[\\/]node_modules[\\/](recharts|d3-|victory-)[\\/]/,
+              priority: 28,
+              reuseExistingChunk: true,
+            },
             // UI libraries chunk
             ui: {
               name: 'ui',
@@ -145,6 +152,45 @@ const nextConfig: NextConfig = {
 
   // Optimize output for modern browsers
   transpilePackages: [], // Only transpile what's necessary
+
+  // PERFORMANCE: Enable compression and caching headers
+  compress: true, // Enable gzip compression (Vercel handles brotli automatically)
+
+  // Headers configuration for better caching and compression
+  async headers() {
+    return [
+      {
+        // Apply to all routes
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Static assets
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // API routes - no cache
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {

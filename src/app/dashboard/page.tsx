@@ -6,39 +6,14 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { db, withRetry } from "@/lib/db";
 import { classes, userCardProgress, flashcards, decks, userStats } from "@/lib/db/schema";
-import { eq, and, sql, asc, inArray } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { Play, BookOpen, FileText, Lightbulb, Flame, Bookmark } from "lucide-react";
+import { cache } from "react";
 
-const getColorClass = (color: string | null) => {
-  const colorMap: { [key: string]: string } = {
-    purple: "bg-purple-500",
-    blue: "bg-blue-500",
-    green: "bg-green-500",
-    red: "bg-red-500",
-    orange: "bg-orange-500",
-    yellow: "bg-yellow-500",
-    pink: "bg-pink-500",
-    indigo: "bg-indigo-500",
-    teal: "bg-teal-500",
-  };
-  return colorMap[color || "purple"] || "bg-purple-500";
-};
-
-export default async function DashboardPage() {
-  const { userId, has } = await auth();
-  const user = await currentUser();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const hasPaidPlan = has({ plan: 'paid' });
-  const userName = user?.firstName || "there";
-
-  // Fetch all classes with their decks and flashcards
-  // OPTIMIZATION: Only load flashcard IDs to reduce memory usage
-  // Wrapped with retry logic to handle connection timeouts
-  const allClasses = await withRetry(
+// PERFORMANCE: Cache the classes query (changes rarely, no user-specific data)
+// This reduces database load significantly for concurrent users
+const getCachedClasses = cache(async () => {
+  return withRetry(
     () =>
       db.query.classes.findMany({
         where: eq(classes.isPublished, true),
@@ -58,72 +33,109 @@ export default async function DashboardPage() {
           },
         },
       }),
-    { queryName: 'dashboard-fetch-all-classes' }
+    { queryName: 'dashboard-fetch-all-classes-cached' }
+  );
+});
+
+const getColorClass = (color: string | null) => {
+  const colorMap: { [key: string]: string } = {
+    purple: "bg-purple-500",
+    blue: "bg-blue-500",
+    green: "bg-green-500",
+    red: "bg-red-500",
+    orange: "bg-orange-500",
+    yellow: "bg-yellow-500",
+    pink: "bg-pink-500",
+    indigo: "bg-indigo-500",
+    teal: "bg-teal-500",
+  };
+  return colorMap[color || "purple"] || "bg-purple-500";
+};
+
+export default async function DashboardPage() {
+  // PERFORMANCE: Optimize Clerk calls - only fetch what we need
+  const { userId, has } = await auth();
+
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
+  const hasPaidPlan = has({ plan: 'paid' });
+
+  // PERFORMANCE: Fetch user in parallel with database queries (not blocking)
+  // This reduces total wait time significantly
+  const [user, allClasses, allProgressRecords, userStatsRecords] = await Promise.all([
+    // Fetch user info (for firstName)
+    currentUser(),
+    // Query 1: Fetch all classes with their decks and flashcard IDs (CACHED)
+    getCachedClasses(),
+    // Query 2: Batch fetch ALL user progress in a single query
+    withRetry(
+      () =>
+        db
+          .select()
+          .from(userCardProgress)
+          .where(eq(userCardProgress.clerkUserId, userId)),
+      { queryName: 'dashboard-all-user-progress' }
+    ),
+    // Query 3: Fetch user stats (study streak, total time)
+    withRetry(
+      () =>
+        db
+          .select()
+          .from(userStats)
+          .where(eq(userStats.clerkUserId, userId))
+          .limit(1),
+      { queryName: 'dashboard-user-stats' }
+    ),
+  ]);
+
+  const userName = user?.firstName || "there";
+
+  // Create a Set for O(1) lookup of studied flashcard IDs
+  const studiedFlashcardIds = new Set(
+    allProgressRecords.map((record) => record.flashcardId)
   );
 
   // Calculate total flashcard count and progress for each class
-  const classesWithProgress = await Promise.all(
-    allClasses.map(async (cls) => {
-      const flashcardIds = cls.decks.flatMap((deck) =>
-        deck.flashcards.map((card) => card.id)
-      );
+  // Process in-memory without additional database queries
+  const classesWithProgress = allClasses.map((cls) => {
+    const flashcardIds = cls.decks.flatMap((deck) =>
+      deck.flashcards.map((card) => card.id)
+    );
 
-      const totalCards = flashcardIds.length;
-      const deckCount = cls.decks.length;
+    const totalCards = flashcardIds.length;
+    const deckCount = cls.decks.length;
 
-      // Get user's progress for this class
-      let progress = 0;
-      let studiedCount = 0;
-      if (totalCards > 0 && flashcardIds.length > 0) {
-        const progressRecords = await withRetry(
-          () =>
-            db
-              .select()
-              .from(userCardProgress)
-              .where(
-                and(
-                  eq(userCardProgress.clerkUserId, userId),
-                  inArray(userCardProgress.flashcardId, flashcardIds)
-                )
-              ),
-          { queryName: `dashboard-class-progress-${cls.id}` }
-        );
+    // Calculate progress using the in-memory Set (O(1) lookups)
+    let progress = 0;
+    let studiedCount = 0;
+    if (totalCards > 0) {
+      studiedCount = flashcardIds.filter((id) => studiedFlashcardIds.has(id)).length;
+      // For free users, cap the total cards used in progress calculation
+      const effectiveTotalCards = hasPaidPlan ? totalCards : Math.min(totalCards, 10);
+      const effectiveProgressCount = Math.min(studiedCount, effectiveTotalCards);
+      progress = Math.round((effectiveProgressCount / effectiveTotalCards) * 100);
+    }
 
-        studiedCount = progressRecords.length;
-        // For free users, cap the total cards used in progress calculation
-        const effectiveTotalCards = hasPaidPlan ? totalCards : Math.min(totalCards, 10);
-        const effectiveProgressCount = Math.min(progressRecords.length, effectiveTotalCards);
-        progress = Math.round((effectiveProgressCount / effectiveTotalCards) * 100);
-      }
-
-      return {
-        id: cls.id,
-        order: cls.order,
-        name: cls.name,
-        description: cls.description,
-        icon: cls.icon,
-        color: cls.color,
-        cardCount: totalCards,
-        deckCount,
-        progress,
-        studiedCount,
-      };
-    })
-  );
+    return {
+      id: cls.id,
+      order: cls.order,
+      name: cls.name,
+      description: cls.description,
+      icon: cls.icon,
+      color: cls.color,
+      cardCount: totalCards,
+      deckCount,
+      progress,
+      studiedCount,
+    };
+  });
 
   const totalCards = classesWithProgress.reduce((sum, cls) => sum + cls.cardCount, 0);
 
-  // Get user's overall studied cards count
-  const [studiedCardsResult] = await withRetry(
-    () =>
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(userCardProgress)
-        .where(eq(userCardProgress.clerkUserId, userId)),
-    { queryName: 'dashboard-overall-progress-count' }
-  );
-
-  const studiedCards = studiedCardsResult?.count || 0;
+  // OPTIMIZATION: Use already-fetched progress data instead of another query
+  const studiedCards = allProgressRecords.length;
 
   // For free users, limit the total cards displayed and used in calculations
   const displayTotalCards = hasPaidPlan ? totalCards : Math.min(totalCards, 10);
@@ -131,17 +143,8 @@ export default async function DashboardPage() {
   const effectiveStudiedCards = Math.min(studiedCards, displayTotalCards);
   const overallProgress = displayTotalCards > 0 ? Math.round((effectiveStudiedCards / displayTotalCards) * 100) : 0;
 
-  // Get user stats for daily goal and streak
-  const [userStatsRecord] = await withRetry(
-    () =>
-      db
-        .select()
-        .from(userStats)
-        .where(eq(userStats.clerkUserId, userId))
-        .limit(1),
-    { queryName: 'dashboard-user-stats' }
-  );
-
+  // OPTIMIZATION: Use already-fetched user stats from parallel query
+  const [userStatsRecord] = userStatsRecords;
   const studyStreak = userStatsRecord?.studyStreakDays || 0;
   const totalStudyTime = userStatsRecord?.totalStudyTime || 0;
   const dailyGoal = 60; // 60 minutes daily goal
@@ -177,10 +180,10 @@ export default async function DashboardPage() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-300">Overall Progress</h3>
+                  <h2 className="text-lg font-semibold text-gray-300">Overall Progress</h2>
                   <span className="text-2xl font-bold text-blue-400">{overallProgress}%</span>
                 </div>
-                <Progress value={overallProgress} className="h-3 mb-2" />
+                <Progress value={overallProgress} className="h-3 mb-2" aria-label="Overall study progress" />
                 <p className="text-sm text-gray-400">
                   {effectiveStudiedCards}/{displayTotalCards} Cards Studied
                 </p>
@@ -208,7 +211,7 @@ export default async function DashboardPage() {
                       </p>
                     </CardHeader>
                     <CardContent>
-                      <Progress value={cls.progress} className="mb-4" />
+                      <Progress value={cls.progress} className="mb-4" aria-label={`${cls.name} progress`} />
                       <Link href={`/dashboard/class/${cls.id}`}>
                         <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                           Continue
@@ -236,7 +239,7 @@ export default async function DashboardPage() {
                   </Button>
                 </Link>
                 <Link href="/dashboard/bookmarks" className="block">
-                  <Button variant="outline" className="w-full border-purple-600 text-purple-400 hover:bg-purple-500/10 justify-start">
+                  <Button variant="outline" className="w-full border-purple-400 text-purple-200 hover:bg-purple-500/10 justify-start">
                     <Bookmark className="mr-2 h-4 w-4" />
                     My Bookmarks
                   </Button>

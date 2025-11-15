@@ -92,10 +92,10 @@ export default function ClassDetailClient({ classData, userName, daysLeft }: Cla
         <Card className="bg-slate-800/50 border-slate-700 mb-6">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold text-gray-300">Overall Progress</h3>
+              <h2 className="text-lg font-semibold text-gray-300">Overall Progress</h2>
               <span className="text-2xl font-bold text-blue-400">{overallProgress}%</span>
             </div>
-            <Progress value={overallProgress} className="h-3 mb-2" />
+            <Progress value={overallProgress} className="h-3 mb-2" aria-label={`${classData.name} overall progress`} />
             <p className="text-sm font-semibold text-white bg-blue-600 px-3 py-1.5 rounded-md inline-block">
               {totalStudied} of {totalCards} unique cards studied
             </p>
@@ -244,7 +244,7 @@ export default function ClassDetailClient({ classData, userName, daysLeft }: Cla
 
                     {/* Progress Bar */}
                     <div className="mt-4">
-                      <Progress value={deck.progress} className="h-2" />
+                      <Progress value={deck.progress} className="h-2" aria-label={`${deck.name} progress`} />
                     </div>
                   </CardContent>
                 </Card>

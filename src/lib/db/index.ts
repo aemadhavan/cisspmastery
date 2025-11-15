@@ -16,13 +16,13 @@ if (!effectiveConnectionString && !isNextBuild) {
 }
 
 // Create postgres client with connection pooling for Xata
-// Optimized for Xata free tier memory constraints
+// PERFORMANCE OPTIMIZATION: Increased pool size and optimized timeouts for better throughput
 const client = postgres(effectiveConnectionString!, {
   prepare: false,
-  max: 5, // Increased slightly from 2 to handle concurrent requests better
-  idle_timeout: 20, // Release idle connections after 20 seconds
-  max_lifetime: 60 * 5, // 5 minutes max lifetime
-  connect_timeout: 45, // Connection timeout increased to 45 seconds for cold starts and warmup
+  max: 10, // Increased from 5 to handle more concurrent requests (reduces queue time)
+  idle_timeout: 30, // Increased from 20s to keep warm connections longer
+  max_lifetime: 60 * 10, // Increased to 10 minutes to reduce reconnection overhead
+  connect_timeout: 10, // Reduced from 45s - fail fast if DB is unreachable
   fetch_types: false, // Disable type fetching to reduce memory
   onnotice: () => {}, // Suppress notices
   connection: {

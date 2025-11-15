@@ -190,8 +190,9 @@ export default function Flashcard({
                           alt={img.altText || 'Question image'}
                           width={500}
                           height={300}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 500px"
                           className="rounded-lg border border-slate-600 object-contain w-full h-auto max-h-64 transition-opacity group-hover:opacity-90"
-                          unoptimized
+                          loading="lazy"
                         />
                         <div className="absolute top-2 right-2 bg-slate-900/70 text-white p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                           <ZoomIn className="w-4 h-4" />
@@ -285,8 +286,9 @@ export default function Flashcard({
                           alt={img.altText || 'Answer image'}
                           width={500}
                           height={300}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 500px"
                           className="rounded-lg border border-purple-400 object-contain w-full h-auto max-h-64 transition-opacity group-hover:opacity-90"
-                          unoptimized
+                          loading="lazy"
                         />
                         <div className="absolute top-2 right-2 bg-purple-900/70 text-white p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                           <ZoomIn className="w-4 h-4" />
@@ -384,8 +386,9 @@ export default function Flashcard({
                 alt={zoomedImage.altText || 'Zoomed image'}
                 width={1920}
                 height={1080}
+                sizes="100vw"
                 className="object-contain max-w-full max-h-[90vh]"
-                unoptimized
+                priority
               />
             </div>
           </div>
