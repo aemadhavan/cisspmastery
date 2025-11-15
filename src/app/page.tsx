@@ -6,13 +6,11 @@ import { Suspense } from "react";
 
 // Lazy load icons to reduce initial bundle
 const ArrowRight = dynamic(
-  () => import("lucide-react").then(mod => ({ default: mod.ArrowRight })),
-  { ssr: false }
+  () => import("lucide-react").then(mod => ({ default: mod.ArrowRight }))
 );
 
-// Lazy load BuyNowButton for better initial page performance - no SSR to reduce hydration cost
+// Lazy load BuyNowButton for better initial page performance
 const BuyNowButton = dynamic(() => import("@/components/BuyNowButton"), {
-  ssr: false,
   loading: () => (
     <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold px-8 py-4 rounded-full animate-pulse h-14 w-64" />
   ),

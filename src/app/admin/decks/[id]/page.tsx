@@ -76,6 +76,17 @@ interface ImageUpload {
   isExisting?: boolean; // true if loaded from database
 }
 
+interface MediaUpload {
+  url: string;
+  key: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  placement: string;
+  order: number;
+  altText: string | null;
+}
+
 export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [deckId, setDeckId] = useState<string | null>(null);
@@ -307,8 +318,74 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
     if (!deckId) return;
 
     setIsSaving(true);
+    setUploadingImages(true);
+
     try {
-      // First, create or update the flashcard
+      const allImages = [...questionImages, ...answerImages];
+      const flashcardId = editingCard?.id || 'temp';
+
+      // Upload new images first
+      const uploadedMedia: MediaUpload[] = [];
+
+      for (const image of allImages) {
+        // Skip already uploaded images (existing ones from DB)
+        if (image.isExisting && !image.file) {
+          // For existing images, we need to find the corresponding media data
+          const existingMedia = editingCard?.media?.find(m =>
+            m.fileUrl === image.preview && m.placement === image.placement
+          );
+          if (existingMedia) {
+            uploadedMedia.push({
+              url: existingMedia.fileUrl,
+              key: existingMedia.fileUrl.split('/').pop() || '',
+              fileName: existingMedia.fileName,
+              fileSize: 0, // Size not available for existing images
+              mimeType: 'image/jpeg', // Default mime type
+              placement: image.placement,
+              order: image.order,
+              altText: null,
+            });
+          }
+          continue;
+        }
+
+        // Upload new images
+        if (image.file) {
+          try {
+            const uploadFormData = new FormData();
+            uploadFormData.append('file', image.file);
+            uploadFormData.append('flashcardId', flashcardId);
+            uploadFormData.append('placement', image.placement);
+            uploadFormData.append('order', image.order.toString());
+
+            const uploadRes = await fetch('/api/admin/upload', {
+              method: 'POST',
+              body: uploadFormData,
+            });
+
+            if (!uploadRes.ok) {
+              console.error('Failed to upload image:', image.file.name);
+              continue;
+            }
+
+            const uploadData = await uploadRes.json();
+            uploadedMedia.push({
+              url: uploadData.url,
+              key: uploadData.key,
+              fileName: uploadData.fileName,
+              fileSize: uploadData.fileSize,
+              mimeType: uploadData.mimeType,
+              placement: image.placement,
+              order: image.order,
+              altText: null,
+            });
+          } catch (error) {
+            console.error('Error uploading image:', error);
+          }
+        }
+      }
+
+      // Now create or update the flashcard with media array
       const url = editingCard
         ? `/api/admin/flashcards/${editingCard.id}`
         : "/api/admin/flashcards";
@@ -321,38 +398,13 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
           ...formData,
           deckId: deckId,
           quizData: quizData,
+          media: uploadedMedia,
         }),
       });
 
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || "Failed to save flashcard");
-      }
-
-      const savedCard = await res.json();
-      const flashcardId = savedCard.flashcard?.id || savedCard.id;
-
-      // Upload only new images (not existing ones)
-      const newImages = [...questionImages, ...answerImages].filter(img => !img.isExisting && img.file);
-      if (newImages.length > 0) {
-        setUploadingImages(true);
-        for (const image of newImages) {
-          const formData = new FormData();
-          formData.append('file', image.file!);
-          formData.append('flashcardId', flashcardId);
-          formData.append('placement', image.placement);
-          formData.append('order', image.order.toString());
-
-          const uploadRes = await fetch('/api/admin/upload', {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (!uploadRes.ok) {
-            console.error('Failed to upload image:', image.file!.name);
-          }
-        }
-        setUploadingImages(false);
       }
 
       toast.success(editingCard ? "Card updated successfully" : "Card created successfully");

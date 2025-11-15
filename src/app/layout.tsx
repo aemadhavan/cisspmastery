@@ -10,20 +10,17 @@ const ClerkProvider = dynamic(
 
 // Lazy load non-critical components to reduce TBT
 const Header = dynamic(() => import("@/components/Header"), {
-  ssr: false, // Client-side only to reduce SSR overhead
   loading: () => (
     <header className="border-b border-slate-700 bg-slate-900 sticky top-0 z-50" style={{height: '64px'}} />
   ),
 });
 
 const Footer = dynamic(() => import("@/components/Footer"), {
-  ssr: false, // Load after initial paint since it's below the fold
   loading: () => null,
 });
 
 // Client-only component wrapper for Toaster
 const ClientToaster = dynamic(() => import("@/components/ClientToaster"), {
-  ssr: false, // Not needed for initial render
   loading: () => null,
 });
 

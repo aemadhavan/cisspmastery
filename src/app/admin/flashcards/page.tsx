@@ -130,6 +130,7 @@ export default function AdminFlashcardsPage() {
     loadFlashcards();
   }, []);
 
+
   const uploadImages = async (images: MediaFile[], flashcardId: string): Promise<MediaFile[]> => {
     const uploadedMedia: MediaFile[] = [];
 
@@ -263,6 +264,9 @@ export default function AdminFlashcardsPage() {
       const answerMedia = card.media.filter(m => m.placement === 'answer');
       setQuestionImages(questionMedia);
       setAnswerImages(answerMedia);
+    } else {
+      setQuestionImages([]);
+      setAnswerImages([]);
     }
 
     // Set class based on the card's deck data
