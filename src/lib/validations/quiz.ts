@@ -22,6 +22,8 @@ export const quizQuestionSchema = z.object({
       'Cannot have more correct answers than total options'
     ),
   explanation: z.string().optional(),
+  elimination_tactics: z.string().optional(),
+  correct_answer_with_justification: z.string().optional(),
 });
 
 // Quiz file schema (for JSON upload)

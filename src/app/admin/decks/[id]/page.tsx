@@ -17,8 +17,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import RichTextEditor from "@/components/admin/RichTextEditor";
-import { Loader2, Plus, Edit2, Trash2, ArrowLeft, Image as ImageIcon, ClipboardList } from "lucide-react";
+import { Loader2, Plus, Edit2, Trash2, ArrowLeft, Image as ImageIcon, ClipboardList, TestTube, Upload, X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { validateQuizFile, type QuizFile } from "@/lib/validations/quiz";
 
@@ -112,6 +115,13 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
   const [quizData, setQuizData] = useState<QuizFile | null>(null);
   const [quizFileName, setQuizFileName] = useState<string>("");
 
+  // Deck-level quiz state
+  const [deckQuizData, setDeckQuizData] = useState<QuizFile | null>(null);
+  const [deckQuizFileName, setDeckQuizFileName] = useState<string>("");
+  const [deckQuizLoading, setDeckQuizLoading] = useState(false);
+  const [deckHasQuiz, setDeckHasQuiz] = useState(false);
+  const [deckQuizCount, setDeckQuizCount] = useState(0);
+
   // Unwrap params
   useEffect(() => {
     params.then((p) => setDeckId(p.id));
@@ -150,6 +160,22 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
       loadDeckData();
     }
   }, [deckId, loadDeckData]);
+
+  // Check if deck has quiz on mount
+  useEffect(() => {
+    const checkDeckQuiz = async () => {
+      if (!deckId) return;
+      try {
+        const res = await fetch(`/api/decks/${deckId}/has-quiz`);
+        const data = await res.json();
+        setDeckHasQuiz(data.hasQuiz);
+        setDeckQuizCount(data.count);
+      } catch (error) {
+        console.error('Error checking deck quiz:', error);
+      }
+    };
+    checkDeckQuiz();
+  }, [deckId]);
 
   const openCreateDialog = () => {
     setEditingCard(null);
@@ -307,6 +333,92 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
     setQuizData(null);
     setQuizFileName("");
     toast.success('Quiz removed');
+  };
+
+  // Deck-level quiz handlers
+  const handleDeckQuizFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const result = validateQuizFile(json);
+
+      if (!result.success) {
+        toast.error(`Invalid quiz file: ${result.error}`);
+        setDeckQuizData(null);
+        setDeckQuizFileName("");
+        return;
+      }
+
+      setDeckQuizData(result.data);
+      setDeckQuizFileName(file.name);
+      toast.success(`${result.data.questions.length} question(s) loaded`);
+    } catch {
+      toast.error('Failed to parse JSON file');
+      setDeckQuizData(null);
+      setDeckQuizFileName("");
+    }
+  };
+
+  const handleUploadDeckQuiz = async () => {
+    if (!deckQuizData) {
+      toast.error('Please select a quiz file first');
+      return;
+    }
+
+    setDeckQuizLoading(true);
+    try {
+      const res = await fetch(`/api/admin/decks/${deckId}/quiz`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quizData: deckQuizData,
+          classId: deckData?.classId,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to upload deck quiz');
+
+      const data = await res.json();
+      toast.success(data.message);
+      setDeckHasQuiz(true);
+      setDeckQuizCount(deckQuizData.questions.length);
+      setDeckQuizData(null);
+      setDeckQuizFileName("");
+    } catch (error) {
+      toast.error('Failed to upload deck quiz');
+      console.error(error);
+    } finally {
+      setDeckQuizLoading(false);
+    }
+  };
+
+  const handleDeleteDeckQuiz = async () => {
+    if (!confirm('Are you sure you want to delete all quiz questions for this deck?')) {
+      return;
+    }
+
+    setDeckQuizLoading(true);
+    try {
+      const res = await fetch(`/api/admin/decks/${deckId}/quiz`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete deck quiz');
+
+      toast.success('Deck quiz deleted successfully');
+      setDeckHasQuiz(false);
+      setDeckQuizCount(0);
+      setDeckQuizData(null);
+      setDeckQuizFileName("");
+    } catch (error) {
+      toast.error('Failed to delete deck quiz');
+      console.error(error);
+    } finally {
+      setDeckQuizLoading(false);
+    }
   };
 
   const handleSaveCard = async () => {
@@ -537,6 +649,160 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
 
         {activeTab === "edit" && (
           <div className="max-w-6xl mx-auto">
+
+            {/* Deck-Level Test/Quiz Section */}
+            <Card className="mb-6 border-blue-200 bg-blue-50/30">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <TestTube className="w-5 h-5 text-blue-600" />
+                    <h2 className="text-lg font-semibold text-slate-800">
+                      Deck-Level Test/Quiz
+                    </h2>
+                    {deckHasQuiz && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                        {deckQuizCount} Question{deckQuizCount !== 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600 mb-4">
+                  Upload a comprehensive test for the entire deck. Users can take this test to assess their knowledge across all concepts.
+                </p>
+
+                {/* Current Quiz Status */}
+                {deckHasQuiz && (
+                  <Alert className="mb-4 bg-blue-50 border-blue-200">
+                    <TestTube className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      This deck has {deckQuizCount} quiz question{deckQuizCount !== 1 ? 's' : ''}.
+                      Upload a new file to replace, or delete the existing quiz.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-4">
+                  {/* File Upload */}
+                  <div className="space-y-2">
+                    <Label htmlFor="deck-quiz-upload" className="text-slate-700">
+                      Upload Quiz JSON File
+                    </Label>
+                    <Input
+                      id="deck-quiz-upload"
+                      type="file"
+                      accept=".json"
+                      onChange={handleDeckQuizFileSelect}
+                      className="bg-white border-slate-300 cursor-pointer"
+                      disabled={deckQuizLoading}
+                    />
+                    <p className="text-xs text-slate-500">
+                      Expected format: Same as flashcard quiz JSON (see example below)
+                    </p>
+                  </div>
+
+                  {/* Preview of loaded quiz */}
+                  {deckQuizData && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium text-blue-900">
+                            ✓ {deckQuizData.questions.length} question(s) loaded
+                          </p>
+                          <p className="text-sm text-blue-700">{deckQuizFileName}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeckQuizData(null);
+                            setDeckQuizFileName("");
+                          }}
+                          className="text-blue-700 hover:bg-blue-100"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      {/* Show first 2 questions preview */}
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs font-semibold text-blue-800">Preview:</p>
+                        {deckQuizData.questions.slice(0, 2).map((q, idx) => (
+                          <div key={idx} className="text-xs bg-white p-2 rounded border border-blue-200">
+                            <p className="font-medium text-slate-800">{idx + 1}. {q.question}</p>
+                            <p className="text-slate-600 mt-1">
+                              {q.options.length} options •
+                              {q.options.filter(o => o.isCorrect).length} correct answer(s)
+                            </p>
+                          </div>
+                        ))}
+                        {deckQuizData.questions.length > 2 && (
+                          <p className="text-xs text-blue-600">
+                            ... and {deckQuizData.questions.length - 2} more question(s)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleUploadDeckQuiz}
+                      disabled={!deckQuizData || deckQuizLoading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {deckQuizLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          {deckHasQuiz ? 'Update Deck Quiz' : 'Upload Deck Quiz'}
+                        </>
+                      )}
+                    </Button>
+
+                    {deckHasQuiz && (
+                      <Button
+                        onClick={handleDeleteDeckQuiz}
+                        disabled={deckQuizLoading}
+                        variant="destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Deck Quiz
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* JSON Format Example */}
+                  <Collapsible>
+                    <CollapsibleTrigger className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
+                      <ChevronDown className="w-4 h-4" />
+                      View Expected JSON Format
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <pre className="text-xs bg-slate-100 p-3 rounded border overflow-x-auto">
+{`{
+  "questions": [
+    {
+      "question": "What does CIA stand for in information security?",
+      "options": [
+        { "text": "Confidentiality, Integrity, Availability", "isCorrect": true },
+        { "text": "Central Intelligence Agency", "isCorrect": false },
+        { "text": "Computer Information Access", "isCorrect": false }
+      ],
+      "explanation": "CIA Triad is fundamental to information security"
+    }
+  ]
+}`}
+                      </pre>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Flashcards List */}
             {flashcards.length === 0 ? (

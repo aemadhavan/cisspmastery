@@ -165,6 +165,8 @@ export async function POST(request: NextRequest) {
             questionText: q.question,
             options: q.options, // Store as JSON
             explanation: q.explanation || null,
+            eliminationTactics: q.elimination_tactics || null,
+            correctAnswerWithJustification: q.correct_answer_with_justification || null,
             order: index,
             createdBy: admin.clerkUserId,
           }))

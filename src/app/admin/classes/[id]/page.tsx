@@ -19,6 +19,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Edit2, Trash2, ArrowLeft, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { validateQuizFile, type QuizFile } from "@/lib/validations/quiz";
 
 interface ClassData {
   id: string;
@@ -66,6 +67,10 @@ export default function AdminClassDetailPage({ params }: { params: Promise<{ id:
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Deck quiz state
+  const [deckQuizData, setDeckQuizData] = useState<QuizFile | null>(null);
+  const [deckQuizFileName, setDeckQuizFileName] = useState<string>("");
+
   // Unwrap params
   useEffect(() => {
     params.then((p) => setClassId(p.id));
@@ -108,6 +113,8 @@ export default function AdminClassDetailPage({ params }: { params: Promise<{ id:
       isPremium: false,
       isPublished: true,
     });
+    setDeckQuizData(null);
+    setDeckQuizFileName("");
     setIsDialogOpen(true);
   };
 
@@ -126,6 +133,41 @@ export default function AdminClassDetailPage({ params }: { params: Promise<{ id:
   const openDeleteDialog = (deck: Deck) => {
     setDeletingDeck(deck);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeckQuizFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setDeckQuizData(null);
+      setDeckQuizFileName("");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const result = validateQuizFile(json);
+
+      if (!result.success) {
+        toast.error(`Invalid quiz file: ${result.error}`);
+        setDeckQuizData(null);
+        setDeckQuizFileName("");
+        return;
+      }
+
+      setDeckQuizData(result.data);
+      setDeckQuizFileName(file.name);
+      toast.success(`${result.data.questions.length} question(s) loaded`);
+    } catch {
+      toast.error('Failed to parse JSON file');
+      setDeckQuizData(null);
+      setDeckQuizFileName("");
+    }
+  };
+
+  const handleRemoveDeckQuiz = () => {
+    setDeckQuizData(null);
+    setDeckQuizFileName("");
   };
 
   const handleSaveDeck = async () => {
@@ -157,8 +199,37 @@ export default function AdminClassDetailPage({ params }: { params: Promise<{ id:
         throw new Error(error.error || "Failed to save deck");
       }
 
+      const result = await res.json();
+      const savedDeckId = editingDeck ? editingDeck.id : result.deck.id;
+
+      // Upload deck quiz if present
+      if (deckQuizData && savedDeckId) {
+        try {
+          const quizRes = await fetch(`/api/admin/decks/${savedDeckId}/quiz`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              quizData: deckQuizData,
+              classId: classId,
+            }),
+          });
+
+          if (!quizRes.ok) {
+            throw new Error('Failed to upload deck quiz');
+          }
+
+          const quizResult = await quizRes.json();
+          toast.success(quizResult.message);
+        } catch (quizError) {
+          console.error("Error uploading quiz:", quizError);
+          toast.error('Deck saved but quiz upload failed');
+        }
+      }
+
       toast.success(editingDeck ? "Deck updated successfully" : "Deck created successfully");
       setIsDialogOpen(false);
+      setDeckQuizData(null);
+      setDeckQuizFileName("");
       loadClassData();
     } catch (error) {
       console.error("Error saving deck:", error);
@@ -205,7 +276,21 @@ export default function AdminClassDetailPage({ params }: { params: Promise<{ id:
   }
 
   if (!classData) {
-    return null;
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-gray-400 mb-4">Class not found or failed to load</p>
+            <Link href="/admin/classes">
+              <Button variant="outline" className="border-slate-700 text-gray-300 hover:bg-slate-700">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Classes
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -427,6 +512,63 @@ export default function AdminClassDetailPage({ params }: { params: Promise<{ id:
               <p className="text-xs text-gray-400">
                 Lower numbers appear first in the list
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deckQuiz">
+                Deck Test/Quiz (Optional)
+              </Label>
+              <p className="text-xs text-gray-400">
+                Upload a JSON file with multiple-choice questions for this entire deck
+              </p>
+
+              <Input
+                id="deckQuiz"
+                type="file"
+                accept=".json"
+                onChange={handleDeckQuizFileSelect}
+                className="bg-slate-900 border-slate-700 text-white cursor-pointer"
+              />
+
+              {deckQuizData && (
+                <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-300">
+                        ✓ {deckQuizData.questions.length} question{deckQuizData.questions.length !== 1 ? 's' : ''} loaded
+                      </p>
+                      <p className="text-xs text-blue-400 mt-1">{deckQuizFileName}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveDeckQuiz}
+                      className="text-blue-300 hover:text-blue-100 hover:bg-blue-800"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-blue-700">
+                    <p className="text-xs text-blue-300 font-medium mb-1">Preview:</p>
+                    <div className="space-y-1">
+                      {deckQuizData.questions.slice(0, 2).map((q, idx) => (
+                        <div key={idx} className="text-xs text-blue-200">
+                          <p className="font-medium">Q{idx + 1}: {q.question}</p>
+                          <p className="text-blue-400 ml-2 mt-0.5">
+                            {q.options.length} options, {q.options.filter(o => o.isCorrect).length} correct
+                          </p>
+                        </div>
+                      ))}
+                      {deckQuizData.questions.length > 2 && (
+                        <p className="text-xs text-blue-400 italic">
+                          +{deckQuizData.questions.length - 2} more question(s)...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between py-2 px-3 bg-slate-900 rounded-lg">

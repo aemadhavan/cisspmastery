@@ -89,6 +89,8 @@ export async function withRetry<T>(
         err?.message?.includes('CONNECT_TIMEOUT') ||
         err?.message?.includes('Connection terminated') ||
         err?.message?.includes('Connection closed') ||
+        err?.message?.includes('unexpected EOF') ||
+        err?.message?.includes('receive message failed') ||
         err?.message?.includes('timeout');
 
       // Don't retry if it's not a connection error or if we've exhausted retries

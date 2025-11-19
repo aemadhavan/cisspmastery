@@ -1,0 +1,134 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
+import { db } from '@/lib/db';
+import { deckQuizQuestions } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { validateQuizFile, QuizFile } from '@/lib/validations/quiz';
+import { CacheInvalidation } from '@/lib/redis/invalidation';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * PUT /api/admin/decks/[id]/quiz
+ * Create or update quiz questions for a deck
+ * Admin only
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const admin = await requireAdmin();
+    const { id: deckId } = await params;
+    const body = await request.json();
+    const { quizData, classId } = body as { quizData: QuizFile | null; classId?: string };
+
+    // If quizData is null, delete all existing quiz questions
+    if (quizData === null) {
+      await db.delete(deckQuizQuestions).where(eq(deckQuizQuestions.deckId, deckId));
+
+      // Invalidate cache
+      if (classId) {
+        await CacheInvalidation.deck(deckId, classId);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Deck quiz questions deleted',
+      });
+    }
+
+    // Validate quiz data using the same validator as flashcard quizzes
+    const validationResult = validateQuizFile(quizData);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: `Invalid quiz data: ${validationResult.error}` },
+        { status: 400 }
+      );
+    }
+
+    // Delete existing quiz questions for this deck
+    await db.delete(deckQuizQuestions).where(eq(deckQuizQuestions.deckId, deckId));
+
+    // Insert new quiz questions
+    if (validationResult.data.questions.length > 0) {
+      await db.insert(deckQuizQuestions).values(
+        validationResult.data.questions.map((q, index) => ({
+          deckId: deckId,
+          questionText: q.question,
+          options: q.options, // JSON array: [{text, isCorrect}]
+          explanation: q.explanation || null,
+          eliminationTactics: q.elimination_tactics || null,
+          correctAnswerWithJustification: q.correct_answer_with_justification || null,
+          order: index,
+          difficulty: null, // Could be added to quiz validation schema later
+          createdBy: admin.clerkUserId,
+        }))
+      );
+    }
+
+    // Invalidate cache
+    if (classId) {
+      await CacheInvalidation.deck(deckId, classId);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${validationResult.data.questions.length} quiz question(s) uploaded successfully`,
+      count: validationResult.data.questions.length,
+    });
+  } catch (error) {
+    console.error('Error updating deck quiz:', error);
+
+    // Check if it's an authentication error
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update deck quiz questions' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/admin/decks/[id]/quiz
+ * Delete all quiz questions for a deck
+ * Admin only
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await requireAdmin();
+    const { id: deckId } = await params;
+
+    // Delete all quiz questions for this deck
+    await db.delete(deckQuizQuestions).where(eq(deckQuizQuestions.deckId, deckId));
+
+    return NextResponse.json({
+      success: true,
+      message: 'Deck quiz questions deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting deck quiz:', error);
+
+    // Check if it's an authentication error
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to delete deck quiz questions' },
+      { status: 500 }
+    );
+  }
+}

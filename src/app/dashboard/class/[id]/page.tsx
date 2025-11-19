@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { getClassWithProgress } from "@/lib/api/class-server";
 import ClassDetailClient from "@/components/ClassDetailClient";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
-import { db } from "@/lib/db";
+import { db, withRetry } from "@/lib/db";
 import { subscriptions } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -66,10 +66,13 @@ export default async function ClassDetailPage({
 
   try {
     // First, check ALL subscriptions for this user (for debugging)
-    const allUserSubscriptions = await db.query.subscriptions.findMany({
-      where: eq(subscriptions.clerkUserId, userId),
-      orderBy: [desc(subscriptions.createdAt)]
-    });
+    const allUserSubscriptions = await withRetry(
+      () => db.query.subscriptions.findMany({
+        where: eq(subscriptions.clerkUserId, userId),
+        orderBy: [desc(subscriptions.createdAt)]
+      }),
+      { queryName: 'fetch-all-user-subscriptions' }
+    );
 
     console.log(`[Subscription Debug] User ID: ${userId}`);
     console.log(`[Subscription Debug] Total subscriptions found: ${allUserSubscriptions.length}`);
@@ -80,13 +83,16 @@ export default async function ClassDetailPage({
     }
 
     // Now get the active one
-    const subscription = await db.query.subscriptions.findFirst({
-      where: and(
-        eq(subscriptions.clerkUserId, userId),
-        eq(subscriptions.status, 'active')
-      ),
-      orderBy: [desc(subscriptions.createdAt)]
-    });
+    const subscription = await withRetry(
+      () => db.query.subscriptions.findFirst({
+        where: and(
+          eq(subscriptions.clerkUserId, userId),
+          eq(subscriptions.status, 'active')
+        ),
+        orderBy: [desc(subscriptions.createdAt)]
+      }),
+      { queryName: 'fetch-active-subscription' }
+    );
 
     // Calculate remaining days from subscription creation date (365 days total)
     if (subscription?.createdAt) {
