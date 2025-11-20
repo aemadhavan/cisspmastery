@@ -27,6 +27,8 @@ export async function GET(
         questionText: q.questionText,
         options: q.options, // Already a JSON array
         explanation: q.explanation,
+        eliminationTactics: q.eliminationTactics,
+        correctAnswerWithJustification: q.correctAnswerWithJustification,
         order: q.order,
       })),
     });

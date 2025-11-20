@@ -46,6 +46,8 @@ export async function GET(
         questionText: q.questionText,
         options: q.options, // Already in JSON format: [{text, isCorrect}]
         explanation: q.explanation,
+        eliminationTactics: q.eliminationTactics,
+        correctAnswerWithJustification: q.correctAnswerWithJustification,
         order: q.order,
         difficulty: q.difficulty,
       })),

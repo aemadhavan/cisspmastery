@@ -16,6 +16,8 @@ interface QuizQuestion {
   questionText: string;
   options: QuizOption[];
   explanation: string | null;
+  eliminationTactics?: string | null;
+  correctAnswerWithJustification?: string | null;
   order: number;
   difficulty?: number | null;
 }
@@ -221,10 +223,28 @@ export function DeckQuizModal({ isOpen, onClose, deckId, deckName }: DeckQuizMod
             </div>
 
             {/* Explanation */}
-            {showExplanation && currentQuestion.explanation && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-900 mb-2">Explanation:</p>
-                <p className="text-sm text-blue-800">{currentQuestion.explanation}</p>
+            {showExplanation && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                {currentQuestion.explanation && (
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 mb-2">Explanation:</p>
+                    <p className="text-sm text-blue-800">{currentQuestion.explanation}</p>
+                  </div>
+                )}
+
+                {currentQuestion.eliminationTactics && (
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 mb-2">Elimination Tactics:</p>
+                    <p className="text-sm text-blue-800">{currentQuestion.eliminationTactics}</p>
+                  </div>
+                )}
+
+                {currentQuestion.correctAnswerWithJustification && (
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 mb-2">Correct Answer with Justification:</p>
+                    <p className="text-sm text-blue-800">{currentQuestion.correctAnswerWithJustification}</p>
+                  </div>
+                )}
               </div>
             )}
 
