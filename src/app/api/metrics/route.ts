@@ -11,6 +11,7 @@ import { withTracing } from '@/lib/middleware/with-tracing';
  * Returns metrics in Prometheus text format for scraping
  */
 async function getMetrics(_request: NextRequest) {
+  void _request;
   // Collect current metrics
   collectAppMetrics(cache);
 
@@ -27,7 +28,7 @@ async function getMetrics(_request: NextRequest) {
 }
 
 export const GET = withTracing(
-  withErrorHandling(getMetrics, 'get prometheus metrics'),
+  withErrorHandling(getMetrics as unknown as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'get prometheus metrics'),
   { logRequest: false, logResponse: false }
 );
 
@@ -36,6 +37,7 @@ export const GET = withTracing(
  * GET /api/metrics?format=json
  */
 async function postMetrics(_request: NextRequest) {
+  void _request;
   // Collect current metrics
   collectAppMetrics(cache);
 

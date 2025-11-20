@@ -13,6 +13,7 @@ import { withTracing } from '@/lib/middleware/with-tracing';
  * - Error tracking
  */
 async function getCacheMetrics(_request: NextRequest) {
+  void _request;
   const metrics = cache.getMetrics();
   const health = await cache.checkHealth();
 
@@ -43,6 +44,7 @@ export const GET = withTracing(
  * POST /api/metrics/cache/reset
  */
 async function resetCacheMetrics(_request: NextRequest) {
+  void _request;
   cache.resetMetrics();
 
   return NextResponse.json({

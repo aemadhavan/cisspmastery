@@ -191,9 +191,9 @@ async function updateAdminFlashcard(
 }
 
 export const PATCH = withTracing(
-  withErrorHandling(updateAdminFlashcard as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'update admin flashcard'),
+  withErrorHandling(updateAdminFlashcard, 'update admin flashcard'),
   { logRequest: true, logResponse: false }
-) as typeof updateAdminFlashcard;
+);
 
 /**
  * DELETE /api/admin/flashcards/[id]
@@ -266,6 +266,6 @@ async function deleteAdminFlashcard(
 }
 
 export const DELETE = withTracing(
-  withErrorHandling(deleteAdminFlashcard as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'delete admin flashcard'),
+  withErrorHandling(deleteAdminFlashcard, 'delete admin flashcard'),
   { logRequest: true, logResponse: false }
-) as typeof deleteAdminFlashcard;
+);

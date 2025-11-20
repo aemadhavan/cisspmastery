@@ -5,6 +5,8 @@ import { deckQuizQuestions } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { validateQuizFile, QuizFile } from '@/lib/validations/quiz';
 import { CacheInvalidation } from '@/lib/redis/invalidation';
+import { withErrorHandling } from '@/lib/api/error-handler';
+import { withTracing } from '@/lib/middleware/with-tracing';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +15,7 @@ export const dynamic = 'force-dynamic';
  * Create or update quiz questions for a deck
  * Admin only
  */
-export async function PUT(
+async function updateDeckQuiz(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -79,29 +81,22 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating deck quiz:', error);
-
-    // Check if it's an authentication error
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update deck quiz questions' },
-      { status: 500 }
-    );
+    throw error;
   }
 }
+
+export const PUT = withTracing(
+  withErrorHandling(updateDeckQuiz as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'update admin deck quiz'),
+  { logRequest: true, logResponse: false }
+) as typeof updateDeckQuiz;
 
 /**
  * DELETE /api/admin/decks/[id]/quiz
  * Delete all quiz questions for a deck
  * Admin only
  */
-export async function DELETE(
-  request: NextRequest,
+async function deleteDeckQuiz(
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -117,18 +112,11 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Error deleting deck quiz:', error);
-
-    // Check if it's an authentication error
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to delete deck quiz questions' },
-      { status: 500 }
-    );
+    throw error;
   }
 }
+
+export const DELETE = withTracing(
+  withErrorHandling(deleteDeckQuiz as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'delete admin deck quiz'),
+  { logRequest: true, logResponse: false }
+) as typeof deleteDeckQuiz;

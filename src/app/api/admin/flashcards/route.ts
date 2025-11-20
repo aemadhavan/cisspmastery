@@ -5,12 +5,14 @@ import { flashcards, decks, flashcardMedia, quizQuestions } from '@/lib/db/schem
 import { eq, desc, asc } from 'drizzle-orm';
 import { CacheInvalidation, safeInvalidate } from '@/lib/redis/invalidation';
 import { validateQuizFile } from '@/lib/validations/quiz';
+import { withErrorHandling } from '@/lib/api/error-handler';
+import { withTracing } from '@/lib/middleware/with-tracing';
 
 /**
  * GET /api/admin/flashcards
  * Get all flashcards (admin only)
  */
-export async function GET(request: NextRequest) {
+async function getAdminFlashcards(request: NextRequest) {
   try {
     await requireAdmin();
 
@@ -61,19 +63,20 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching flashcards:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch flashcards';
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: errorMessage.includes('Unauthorized') ? 403 : 500 }
-    );
+    throw error;
   }
 }
+
+export const GET = withTracing(
+  withErrorHandling(getAdminFlashcards, 'get admin flashcards'),
+  { logRequest: true, logResponse: false }
+);
 
 /**
  * POST /api/admin/flashcards
  * Create new flashcard (admin only)
  */
-export async function POST(request: NextRequest) {
+async function createAdminFlashcard(request: NextRequest) {
   try {
     const admin = await requireAdmin();
 
@@ -205,10 +208,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating flashcard:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to create flashcard';
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: errorMessage.includes('Unauthorized') ? 403 : 500 }
-    );
+    throw error;
   }
 }
+
+export const POST = withTracing(
+  withErrorHandling(createAdminFlashcard, 'create admin flashcard'),
+  { logRequest: true, logResponse: false }
+);

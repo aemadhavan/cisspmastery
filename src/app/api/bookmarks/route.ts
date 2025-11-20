@@ -13,6 +13,7 @@ import { withTracing } from '@/lib/middleware/with-tracing';
  * Get all bookmarked flashcards for the authenticated user
  */
 async function getBookmarks(_request: NextRequest) {
+  void _request;
   try {
     const { userId } = await auth();
 

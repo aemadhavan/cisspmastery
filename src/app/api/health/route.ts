@@ -19,6 +19,7 @@ import { withTracing } from '@/lib/middleware/with-tracing';
  * - 503: One or more services unhealthy
  */
 async function getHealth(_request: NextRequest) {
+  void _request;
   const startTime = performance.now();
 
   const health = {

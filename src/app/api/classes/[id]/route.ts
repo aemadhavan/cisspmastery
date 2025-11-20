@@ -157,6 +157,6 @@ async function getClass(
 }
 
 export const GET = withTracing(
-  withErrorHandling(getClass, 'get class overview'),
+  withErrorHandling(getClass as unknown as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'get class overview'),
   { logRequest: true, logResponse: false }
 );

@@ -186,6 +186,6 @@ async function getClassStudyCards(
 }
 
 export const GET = withTracing(
-  withErrorHandling(getClassStudyCards, 'get class study cards'),
+  withErrorHandling(getClassStudyCards as unknown as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'get class study cards'),
   { logRequest: true, logResponse: false }
 );

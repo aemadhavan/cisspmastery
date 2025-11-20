@@ -92,6 +92,6 @@ async function getDomainProgress(
 }
 
 export const GET = withTracing(
-  withErrorHandling(getDomainProgress, 'get domain progress'),
+  withErrorHandling(getDomainProgress as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'get domain progress'),
   { logRequest: true, logResponse: false }
-);
+) as typeof getDomainProgress;

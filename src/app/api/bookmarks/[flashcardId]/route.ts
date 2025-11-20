@@ -66,9 +66,9 @@ async function deleteBookmark(
 }
 
 export const DELETE = withTracing(
-  withErrorHandling(deleteBookmark, 'delete bookmark'),
+  withErrorHandling(deleteBookmark as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'delete bookmark'),
   { logRequest: true, logResponse: false }
-);
+) as typeof deleteBookmark;
 
 /**
  * GET /api/bookmarks/[flashcardId]
@@ -123,6 +123,6 @@ async function getBookmark(
 }
 
 export const GET = withTracing(
-  withErrorHandling(getBookmark, 'get bookmark status'),
+  withErrorHandling(getBookmark as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'get bookmark status'),
   { logRequest: true, logResponse: false }
-);
+) as typeof getBookmark;

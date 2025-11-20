@@ -1,12 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
 import { decks } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { withErrorHandling } from '@/lib/api/error-handler';
+import { withTracing } from '@/lib/middleware/with-tracing';
 
 // GET /api/admin/decks/:id - Get a specific deck
-export async function GET(
-  _request: Request,
+async function getDeck(
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -33,17 +35,18 @@ export async function GET(
     return NextResponse.json(deck);
   } catch (error) {
     console.error('Error fetching deck:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch deck';
-    return NextResponse.json(
-      { error: message },
-      { status: message?.includes('admin') ? 403 : 500 }
-    );
+    throw error;
   }
 }
 
+export const GET = withTracing(
+  withErrorHandling(getDeck as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'get admin deck'),
+  { logRequest: true, logResponse: false }
+) as typeof getDeck;
+
 // PUT /api/admin/decks/:id - Update a deck
-export async function PUT(
-  request: Request,
+async function updateDeck(
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -77,17 +80,18 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating deck:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update deck';
-    return NextResponse.json(
-      { error: message },
-      { status: message?.includes('admin') ? 403 : 500 }
-    );
+    throw error;
   }
 }
 
+export const PUT = withTracing(
+  withErrorHandling(updateDeck as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'update admin deck'),
+  { logRequest: true, logResponse: false }
+) as typeof updateDeck;
+
 // DELETE /api/admin/decks/:id - Delete a deck
-export async function DELETE(
-  _request: Request,
+async function deleteDeck(
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -113,10 +117,11 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Error deleting deck:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete deck';
-    return NextResponse.json(
-      { error: message },
-      { status: message?.includes('admin') ? 403 : 500 }
-    );
+    throw error;
   }
 }
+
+export const DELETE = withTracing(
+  withErrorHandling(deleteDeck as (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>, 'delete admin deck'),
+  { logRequest: true, logResponse: false }
+) as typeof deleteDeck;
