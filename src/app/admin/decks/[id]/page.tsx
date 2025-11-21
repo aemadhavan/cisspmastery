@@ -29,6 +29,7 @@ interface DeckData {
   id: string;
   name: string;
   description: string | null;
+  type: string;
   classId: string;
   class: {
     id: string;
@@ -146,6 +147,7 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
         id: data.id,
         name: data.name,
         description: data.description,
+        type: data.type || 'flashcard',
         classId: data.classId,
         class: data.class,
       });
@@ -387,7 +389,7 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
       const data = await res.json();
       toast.success(data.message);
       setDeckHasQuiz(true);
-      setDeckQuizCount(deckQuizData.questions.length);
+      setDeckQuizCount(data.count || deckQuizData.questions.length);
       setDeckQuizData(null);
       setDeckQuizFileName("");
     } catch (error) {
@@ -653,7 +655,8 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
         {activeTab === "edit" && (
           <div className="max-w-6xl mx-auto">
 
-            {/* Deck-Level Test/Quiz Section */}
+            {/* Deck-Level Test/Quiz Section - Only show for quiz-type decks */}
+            {deckData.type === 'quiz' && (
             <Card className="mb-6 border-blue-200 bg-blue-50/30">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-4">
@@ -670,7 +673,8 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                   </div>
                 </div>
                 <p className="text-sm text-slate-600 mb-4">
-                  Upload a comprehensive test for the entire deck. Users can take this test to assess their knowledge across all concepts.
+                  Upload quiz questions for the entire deck. Users can take this test to assess their knowledge across all concepts.
+                  <strong className="block mt-1">Note: Uploading multiple files will ADD questions to the existing quiz.</strong>
                 </p>
 
                 {/* Current Quiz Status */}
@@ -679,7 +683,7 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                     <TestTube className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-blue-800">
                       This deck has {deckQuizCount} quiz question{deckQuizCount !== 1 ? 's' : ''}.
-                      Upload a new file to replace, or delete the existing quiz.
+                      Upload a new file to add more questions, or delete all questions using the button below.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -762,7 +766,7 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                       ) : (
                         <>
                           <Upload className="w-4 h-4 mr-2" />
-                          {deckHasQuiz ? 'Update Deck Quiz' : 'Upload Deck Quiz'}
+                          {deckHasQuiz ? 'Add More Questions' : 'Upload Deck Quiz'}
                         </>
                       )}
                     </Button>
@@ -806,6 +810,7 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Flashcards List */}
             {flashcards.length === 0 ? (

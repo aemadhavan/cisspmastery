@@ -49,10 +49,16 @@ async function updateDeckQuiz(
       );
     }
 
-    // Delete existing quiz questions for this deck
-    await db.delete(deckQuizQuestions).where(eq(deckQuizQuestions.deckId, deckId));
+    // Get existing questions to calculate the starting order
+    const existingQuestions = await db.query.deckQuizQuestions.findMany({
+      where: eq(deckQuizQuestions.deckId, deckId),
+      orderBy: (questions, { desc }) => [desc(questions.order)],
+      limit: 1,
+    });
 
-    // Insert new quiz questions
+    const startingOrder = existingQuestions.length > 0 ? existingQuestions[0].order + 1 : 0;
+
+    // Insert new quiz questions (append to existing)
     if (validationResult.data.questions.length > 0) {
       await db.insert(deckQuizQuestions).values(
         validationResult.data.questions.map((q, index) => ({
@@ -62,12 +68,17 @@ async function updateDeckQuiz(
           explanation: q.explanation || null,
           eliminationTactics: q.elimination_tactics || null,
           correctAnswerWithJustification: q.correct_answer_with_justification || null,
-          order: index,
+          order: startingOrder + index,
           difficulty: null, // Could be added to quiz validation schema later
           createdBy: admin.clerkUserId,
         }))
       );
     }
+
+    // Get total count after insertion
+    const totalQuestions = await db.query.deckQuizQuestions.findMany({
+      where: eq(deckQuizQuestions.deckId, deckId),
+    });
 
     // Invalidate cache
     if (classId) {
@@ -76,8 +87,9 @@ async function updateDeckQuiz(
 
     return NextResponse.json({
       success: true,
-      message: `${validationResult.data.questions.length} quiz question(s) uploaded successfully`,
-      count: validationResult.data.questions.length,
+      message: `${validationResult.data.questions.length} quiz question(s) added. Total: ${totalQuestions.length} questions`,
+      count: totalQuestions.length,
+      added: validationResult.data.questions.length,
     });
   } catch (error) {
     console.error('Error updating deck quiz:', error);
