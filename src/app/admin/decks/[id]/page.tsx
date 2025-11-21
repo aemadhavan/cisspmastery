@@ -59,6 +59,9 @@ interface FlashcardMedia {
   id: string;
   fileUrl: string;
   fileName: string;
+  fileKey: string;
+  fileSize: number;
+  mimeType: string;
   placement: string;
   order: number;
 }
@@ -449,10 +452,10 @@ export default function AdminDeckDetailPage({ params }: { params: Promise<{ id: 
           if (existingMedia) {
             uploadedMedia.push({
               url: existingMedia.fileUrl,
-              key: existingMedia.fileUrl.split('/').pop() || '',
+              key: existingMedia.fileKey,
               fileName: existingMedia.fileName,
-              fileSize: 0, // Size not available for existing images
-              mimeType: 'image/jpeg', // Default mime type
+              fileSize: existingMedia.fileSize,
+              mimeType: existingMedia.mimeType,
               placement: image.placement,
               order: image.order,
               altText: null,

@@ -279,14 +279,15 @@ export default function RichTextEditor({
         .editor-wrapper .ProseMirror table,
         .editor-wrapper .ProseMirror .tiptap-table {
           display: table !important;
-          border-collapse: separate !important;
-          border-spacing: 0 !important;
+          border-collapse: collapse !important;
           table-layout: fixed !important;
           width: 100% !important;
-          margin: 1rem 0 !important;
+          margin: 1.5rem 0 !important;
           overflow: visible !important;
-          border: 4px solid #a855f7 !important;
-          background-color: #334155 !important;
+          border: 2px solid #8b5cf6 !important;
+          border-radius: 8px !important;
+          background-color: #1e293b !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
         }
 
         .editor-wrapper .ProseMirror table td,
@@ -294,29 +295,39 @@ export default function RichTextEditor({
         .editor-wrapper .ProseMirror .tiptap-table td,
         .editor-wrapper .ProseMirror .tiptap-table th {
           min-width: 120px !important;
-          min-height: 45px !important;
-          height: 45px !important;
-          border: 3px solid #a855f7 !important;
-          padding: 12px !important;
-          vertical-align: top !important;
+          min-height: 50px !important;
+          border: 1px solid #6b21a8 !important;
+          padding: 14px 16px !important;
+          vertical-align: middle !important;
           box-sizing: border-box !important;
           position: relative !important;
           background-color: #1e293b !important;
-          color: #ffffff !important;
+          color: #f1f5f9 !important;
+          font-size: 0.95rem !important;
+          line-height: 1.5 !important;
         }
 
         .editor-wrapper .ProseMirror table th,
         .editor-wrapper .ProseMirror .tiptap-table th {
           font-weight: 700 !important;
           text-align: left !important;
-          background-color: #7c3aed !important;
+          background: linear-gradient(135deg, #7c3aed 0%, #6b21a8 100%) !important;
           color: #ffffff !important;
+          text-transform: uppercase !important;
+          font-size: 0.875rem !important;
+          letter-spacing: 0.5px !important;
+          border-bottom: 2px solid #8b5cf6 !important;
+        }
+
+        .editor-wrapper .ProseMirror table tbody tr:hover td,
+        .editor-wrapper .ProseMirror .tiptap-table tbody tr:hover td {
+          background-color: #334155 !important;
         }
 
         .editor-wrapper .ProseMirror table p,
         .editor-wrapper .ProseMirror .tiptap-table p {
           margin: 0 !important;
-          color: #ffffff !important;
+          color: #f1f5f9 !important;
         }
 
         .tiptap-table .selectedCell:after {
@@ -324,18 +335,24 @@ export default function RichTextEditor({
           position: absolute;
           content: "";
           left: 0; right: 0; top: 0; bottom: 0;
-          background: rgba(168, 85, 247, 0.4) !important;
+          background: rgba(139, 92, 246, 0.25) !important;
           pointer-events: none;
+          border: 2px solid #8b5cf6 !important;
         }
 
         .tiptap-table .column-resize-handle {
           position: absolute;
           right: -2px;
           top: 0;
-          bottom: -2px;
+          bottom: 0;
           width: 4px;
-          background-color: #a855f7 !important;
-          pointer-events: none;
+          background-color: #8b5cf6 !important;
+          cursor: col-resize !important;
+          pointer-events: all !important;
+        }
+
+        .tiptap-table .column-resize-handle:hover {
+          background-color: #a78bfa !important;
         }
 
         .editor-wrapper .ProseMirror {
@@ -360,12 +377,22 @@ export default function RichTextEditor({
 
         .editor-wrapper .ProseMirror ul,
         .editor-wrapper .ProseMirror ol {
-          padding-left: 1.5rem;
-          margin: 0.5rem 0;
+          padding-left: 1.5rem !important;
+          margin: 0.5rem 0 !important;
+          list-style-position: outside !important;
+        }
+
+        .editor-wrapper .ProseMirror ul {
+          list-style-type: disc !important;
+        }
+
+        .editor-wrapper .ProseMirror ol {
+          list-style-type: decimal !important;
         }
 
         .editor-wrapper .ProseMirror li {
-          margin: 0.25rem 0;
+          margin: 0.25rem 0 !important;
+          display: list-item !important;
         }
 
         .editor-wrapper .ProseMirror code {
