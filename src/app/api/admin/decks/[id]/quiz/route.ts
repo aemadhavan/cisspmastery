@@ -66,8 +66,8 @@ async function updateDeckQuiz(
           questionText: q.question,
           options: q.options, // JSON array: [{text, isCorrect}]
           explanation: q.explanation || null,
-          eliminationTactics: q.elimination_tactics || null,
-          correctAnswerWithJustification: q.correct_answer_with_justification || null,
+          eliminationTactics: q.elimination_tactics ? JSON.stringify(q.elimination_tactics) : null,
+          correctAnswerWithJustification: q.correct_answer_with_justification ? JSON.stringify(q.correct_answer_with_justification) : null,
           order: startingOrder + index,
           difficulty: null, // Could be added to quiz validation schema later
           createdBy: admin.clerkUserId,

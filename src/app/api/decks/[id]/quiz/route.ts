@@ -38,6 +38,17 @@ export async function GET(
       });
     }
 
+    // Helper function to safely parse JSON strings
+    const safeJsonParse = (str: string | null): Record<string, string> | null => {
+      if (!str) return null;
+      try {
+        const parsed = JSON.parse(str);
+        return typeof parsed === 'object' ? parsed : null;
+      } catch {
+        return null;
+      }
+    };
+
     // Return questions without exposing sensitive fields like createdBy
     return NextResponse.json({
       success: true,
@@ -46,8 +57,8 @@ export async function GET(
         questionText: q.questionText,
         options: q.options, // Already in JSON format: [{text, isCorrect}]
         explanation: q.explanation,
-        eliminationTactics: q.eliminationTactics,
-        correctAnswerWithJustification: q.correctAnswerWithJustification,
+        eliminationTactics: safeJsonParse(q.eliminationTactics),
+        correctAnswerWithJustification: safeJsonParse(q.correctAnswerWithJustification),
         order: q.order,
         difficulty: q.difficulty,
       })),

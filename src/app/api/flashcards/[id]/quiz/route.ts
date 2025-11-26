@@ -20,6 +20,17 @@ export async function GET(
       orderBy: [asc(quizQuestions.order)],
     });
 
+    // Helper function to safely parse JSON strings
+    const safeJsonParse = (str: string | null): Record<string, string> | null => {
+      if (!str) return null;
+      try {
+        const parsed = JSON.parse(str);
+        return typeof parsed === 'object' ? parsed : null;
+      } catch {
+        return null;
+      }
+    };
+
     return NextResponse.json({
       success: true,
       questions: questions.map((q) => ({
@@ -27,8 +38,8 @@ export async function GET(
         questionText: q.questionText,
         options: q.options, // Already a JSON array
         explanation: q.explanation,
-        eliminationTactics: q.eliminationTactics,
-        correctAnswerWithJustification: q.correctAnswerWithJustification,
+        eliminationTactics: safeJsonParse(q.eliminationTactics),
+        correctAnswerWithJustification: safeJsonParse(q.correctAnswerWithJustification),
         order: q.order,
       })),
     });

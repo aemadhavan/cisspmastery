@@ -16,8 +16,8 @@ interface QuizQuestion {
   questionText: string;
   options: QuizOption[];
   explanation: string | null;
-  eliminationTactics?: string | null;
-  correctAnswerWithJustification?: string | null;
+  eliminationTactics?: Record<string, string> | null;
+  correctAnswerWithJustification?: Record<string, string> | null;
   order: number;
 }
 
@@ -233,17 +233,29 @@ export function QuizModal({ isOpen, onClose, flashcardId, flashcardQuestion }: Q
                   </div>
                 )}
 
-                {currentQuestion.eliminationTactics && (
+                {currentQuestion.eliminationTactics && typeof currentQuestion.eliminationTactics === 'object' && Object.keys(currentQuestion.eliminationTactics).length > 0 && (
                   <div>
                     <p className="text-sm font-semibold text-blue-900 mb-2">Elimination Tactics:</p>
-                    <p className="text-sm text-blue-800">{currentQuestion.eliminationTactics}</p>
+                    <div className="space-y-2">
+                      {Object.entries(currentQuestion.eliminationTactics).map(([option, reason]) => (
+                        <div key={option} className="text-sm text-blue-800">
+                          <span className="font-medium">{option}:</span> {reason}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
-                {currentQuestion.correctAnswerWithJustification && (
+                {currentQuestion.correctAnswerWithJustification && typeof currentQuestion.correctAnswerWithJustification === 'object' && Object.keys(currentQuestion.correctAnswerWithJustification).length > 0 && (
                   <div>
                     <p className="text-sm font-semibold text-blue-900 mb-2">Correct Answer with Justification:</p>
-                    <p className="text-sm text-blue-800">{currentQuestion.correctAnswerWithJustification}</p>
+                    <div className="space-y-2">
+                      {Object.entries(currentQuestion.correctAnswerWithJustification).map(([option, justification]) => (
+                        <div key={option} className="text-sm text-blue-800">
+                          <span className="font-medium">{option}:</span> {justification}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
