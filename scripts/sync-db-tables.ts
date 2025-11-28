@@ -52,7 +52,7 @@ async function listAllTables() {
     ORDER BY table_name;
   `);
 
-  return result.rows.map((row: any) => row.table_name);
+  return result.rows.map((row: { table_name: string }) => row.table_name);
 }
 
 function isSystemTable(tableName: string): boolean {

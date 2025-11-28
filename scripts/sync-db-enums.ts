@@ -36,7 +36,7 @@ async function listAllEnums() {
     ORDER BY t.typname;
   `);
 
-  return result.rows.map((row: any) => row.enum_name);
+  return result.rows.map((row: { enum_name: string }) => row.enum_name);
 }
 
 async function main() {

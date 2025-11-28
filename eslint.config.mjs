@@ -13,7 +13,7 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     languageOptions: {
-      ecmaVersion: 2015,
+      ecmaVersion: 2020,
       sourceType: "module",
       globals: {
         // Node.js globals
