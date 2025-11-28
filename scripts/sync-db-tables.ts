@@ -4,8 +4,10 @@
  */
 
 import { Pool } from 'pg';
-import format from 'pg-format';
 import * as dotenv from 'dotenv';
+
+// pg-format is a CommonJS module, use require
+const format = require('pg-format') as (fmt: string, ...args: any[]) => string;
 
 dotenv.config({ path: '.env.local' });
 
