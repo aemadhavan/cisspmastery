@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { studySessions, userStats, sessionCards } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, avg } from 'drizzle-orm';
 import { withErrorHandling } from '@/lib/api/error-handler';
 import { withTracing } from '@/lib/middleware/with-tracing';
 
@@ -49,10 +49,10 @@ async function endSession(request: NextRequest) {
     const endedAt = new Date();
     const studyDuration = Math.floor((endedAt.getTime() - new Date(session.startedAt).getTime()) / 1000); // in seconds
 
-    // Get average confidence from session cards
+    // Get average confidence from session cards using safe aggregate function
     const sessionCardRecords = await db
       .select({
-        avgConfidence: sql<number>`AVG(${sessionCards.confidenceRating})::decimal`,
+        avgConfidence: avg(sessionCards.confidenceRating).as('avg_confidence'),
       })
       .from(sessionCards)
       .where(eq(sessionCards.sessionId, sessionId));

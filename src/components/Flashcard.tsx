@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import { X, ZoomIn, ZoomOut, Maximize2, TestTube, Bookmark, BookmarkCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DOMPurify from "dompurify";
 
 interface FlashcardMedia {
   id: string;
@@ -44,6 +45,21 @@ export default function Flashcard({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Sanitize HTML content to prevent XSS attacks
+  const sanitizedQuestion = useMemo(() => {
+    return DOMPurify.sanitize(question, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote', 'a'],
+      ALLOWED_ATTR: ['href', 'class', 'target', 'rel']
+    });
+  }, [question]);
+
+  const sanitizedAnswer = useMemo(() => {
+    return DOMPurify.sanitize(answer, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote', 'a'],
+      ALLOWED_ATTR: ['href', 'class', 'target', 'rel']
+    });
+  }, [answer]);
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
@@ -168,7 +184,7 @@ export default function Flashcard({
               <div className="flex flex-col items-center">
                 <div
                   className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
-                  dangerouslySetInnerHTML={{ __html: question }}
+                  dangerouslySetInnerHTML={{ __html: sanitizedQuestion }}
                 />
 
                 {/* Question Images - Grid layout for multiple images */}
@@ -265,7 +281,7 @@ export default function Flashcard({
               <div className="flex flex-col items-center">
                 <div
                   className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
-                  dangerouslySetInnerHTML={{ __html: answer }}
+                  dangerouslySetInnerHTML={{ __html: sanitizedAnswer }}
                 />
 
                 {/* Answer Images - Grid layout for multiple images */}

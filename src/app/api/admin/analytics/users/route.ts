@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
 import { users, userStats, userCardProgress, flashcards } from '@/lib/db/schema';
-import { eq, sql, desc, and, inArray } from 'drizzle-orm';
+import { eq, sql, desc, and, inArray, count } from 'drizzle-orm';
 import { withErrorHandling } from '@/lib/api/error-handler';
 import { withTracing } from '@/lib/middleware/with-tracing';
 
@@ -35,10 +35,10 @@ async function getUsersAnalytics(request: NextRequest) {
       studyStreakDays: userStats.studyStreakDays,
       totalStudyTime: userStats.totalStudyTime,
       lastActiveDate: userStats.lastActiveDate,
-      // Aggregate mastery counts in single query
-      newCount: sql<number>`COUNT(CASE WHEN ${userCardProgress.masteryStatus} = 'new' THEN 1 END)::int`,
-      learningCount: sql<number>`COUNT(CASE WHEN ${userCardProgress.masteryStatus} = 'learning' THEN 1 END)::int`,
-      masteredCount: sql<number>`COUNT(CASE WHEN ${userCardProgress.masteryStatus} = 'mastered' THEN 1 END)::int`,
+      // Aggregate mastery counts in single query using safe SQL functions
+      newCount: count(sql`CASE WHEN ${userCardProgress.masteryStatus} = 'new' THEN 1 END`).as('new_count'),
+      learningCount: count(sql`CASE WHEN ${userCardProgress.masteryStatus} = 'learning' THEN 1 END`).as('learning_count'),
+      masteredCount: count(sql`CASE WHEN ${userCardProgress.masteryStatus} = 'mastered' THEN 1 END`).as('mastered_count'),
     })
     .from(users)
     .leftJoin(userStats, eq(users.clerkUserId, userStats.clerkUserId))
