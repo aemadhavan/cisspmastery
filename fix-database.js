@@ -30,10 +30,21 @@ async function fixDatabase() {
         const orphanedEnums = ['test_status', 'test_type'];
         console.log('\n=== STEP 2: Dropping Orphaned Enums ===');
 
+        // Helper function to validate and safely quote identifier names
+        function safeIdentifier(name) {
+            // Only allow alphanumeric characters and underscores
+            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+                throw new Error(`Invalid identifier name: ${name}`);
+            }
+            // Quote identifier to prevent SQL injection
+            return `"${name.replace(/"/g, '""')}"`;
+        }
+
         for (const enumName of orphanedEnums) {
             try {
                 console.log(`  Dropping ${enumName}...`);
-                await client.query(`DROP TYPE IF EXISTS public.${enumName} CASCADE;`);
+                const safeEnumName = safeIdentifier(enumName);
+                await client.query(`DROP TYPE IF EXISTS public.${safeEnumName} CASCADE;`);
                 console.log(`  ✓ Dropped ${enumName}`);
             } catch (err) {
                 console.log(`  ✗ Error dropping ${enumName}: ${err.message}`);

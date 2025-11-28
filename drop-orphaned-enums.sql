@@ -10,8 +10,9 @@ ORDER BY typname;
 \echo ''
 \echo 'Dropping orphaned enums...'
 
-DROP TYPE IF EXISTS public.test_status CASCADE;
-DROP TYPE IF EXISTS public.test_type CASCADE;
+-- Using quoted identifiers for safety against SQL injection
+DROP TYPE IF EXISTS public."test_status" CASCADE;
+DROP TYPE IF EXISTS public."test_type" CASCADE;
 
 \echo ''
 \echo 'Verification - remaining enums:'

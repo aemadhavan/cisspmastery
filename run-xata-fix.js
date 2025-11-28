@@ -1,6 +1,5 @@
 const { Client } = require('pg');
 require('dotenv').config({ path: '.env.local' });
-const fs = require('fs');
 
 async function runXataFix() {
     const client = new Client({
@@ -11,12 +10,51 @@ async function runXataFix() {
         await client.connect();
         console.log('✓ Connected to Xata\n');
 
-        // Read and execute the SQL script
-        const sql = fs.readFileSync('xata-fix-enums.sql', 'utf8');
-
         console.log('Executing Xata-compatible enum fix...\n');
-        await client.query(sql);
-        console.log('✓ SQL script executed successfully\n');
+
+        // Helper function to validate and safely quote identifier names
+        function safeIdentifier(name) {
+            // Only allow alphanumeric characters and underscores
+            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+                throw new Error(`Invalid identifier name: ${name}`);
+            }
+            // Quote identifier to prevent SQL injection
+            return `"${name.replace(/"/g, '""')}"`;
+        }
+
+        // Step 1: Drop orphaned enums
+        const orphanedEnums = ['test_status', 'test_type'];
+        for (const enumName of orphanedEnums) {
+            const safeEnumName = safeIdentifier(enumName);
+            await client.query(`DROP TYPE IF EXISTS public.${safeEnumName} CASCADE;`);
+            console.log(`  ✓ Dropped ${enumName} (if it existed)`);
+        }
+
+        // Step 2: Create required enums if they don't exist
+        const enumDefinitions = {
+            mastery_status: ['new', 'learning', 'mastered'],
+            payment_status: ['succeeded', 'failed', 'pending'],
+            plan_type: ['free', 'pro_monthly', 'pro_yearly', 'lifetime'],
+            subscription_status: ['active', 'canceled', 'past_due', 'trialing', 'inactive'],
+            user_role: ['user', 'admin']
+        };
+
+        for (const [enumName, values] of Object.entries(enumDefinitions)) {
+            const safeEnumName = safeIdentifier(enumName);
+            const safeValues = values.map(v => `'${v.replace(/'/g, "''")}'`).join(', ');
+
+            await client.query(`
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = $1) THEN
+                        EXECUTE format('CREATE TYPE public.%I AS ENUM(${safeValues})', $1);
+                    END IF;
+                END $$;
+            `, [enumName]);
+            console.log(`  ✓ Ensured ${enumName} exists`);
+        }
+
+        console.log('\n✓ SQL operations completed successfully\n');
 
         // Verify the result
         console.log('=== Final Enum State ===');

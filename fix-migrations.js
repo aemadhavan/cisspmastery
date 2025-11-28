@@ -64,10 +64,22 @@ async function fixMigrations() {
 
     // Since the DB has the tables, let's just drop the orphaned enums and mark all migrations as applied
     console.log(`\n4. Dropping orphaned enums...`);
+
+    // Helper function to validate and safely quote identifier names
+    function safeIdentifier(name) {
+      // Only allow alphanumeric characters and underscores
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+        throw new Error(`Invalid identifier name: ${name}`);
+      }
+      // Quote identifier to prevent SQL injection
+      return `"${name.replace(/"/g, '""')}"`;
+    }
+
     const orphanedEnums = ['test_status', 'test_type'];
     for (const enumName of orphanedEnums) {
       try {
-        await client.query(`DROP TYPE IF EXISTS public.${enumName} CASCADE;`);
+        const safeEnumName = safeIdentifier(enumName);
+        await client.query(`DROP TYPE IF EXISTS public.${safeEnumName} CASCADE;`);
         console.log(`   ✓ Dropped ${enumName}`);
       } catch (err) {
         console.log(`   ✗ Error: ${err.message}`);

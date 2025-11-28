@@ -1,5 +1,6 @@
 const { Client } = require('pg');
 const fs = require('fs');
+const path = require('path');
 require('dotenv').config({ path: '.env.local' });
 
 async function applyMigration() {
@@ -11,8 +12,27 @@ async function applyMigration() {
         await client.connect();
         console.log('✓ Connected to Xata\n');
 
+        // Security: Validate migration file path
+        // This script executes SQL from trusted Drizzle migration files.
+        // The file path is hardcoded and validated to ensure it's in the migrations directory.
+        const migrationFileName = '0000_secret_nightcrawler.sql';
+        const migrationsDir = path.join(__dirname, 'drizzle', 'migrations');
+        const migrationPath = path.join(migrationsDir, migrationFileName);
+
+        // Validate that the resolved path is actually in the migrations directory
+        const resolvedPath = path.resolve(migrationPath);
+        const resolvedMigrationsDir = path.resolve(migrationsDir);
+        if (!resolvedPath.startsWith(resolvedMigrationsDir)) {
+            throw new Error('Security: Migration file must be in the migrations directory');
+        }
+
+        // Check file exists and is readable
+        if (!fs.existsSync(resolvedPath)) {
+            throw new Error(`Migration file not found: ${migrationFileName}`);
+        }
+
         // Read the migration file
-        const migrationSQL = fs.readFileSync('drizzle/migrations/0000_secret_nightcrawler.sql', 'utf8');
+        const migrationSQL = fs.readFileSync(resolvedPath, 'utf8');
 
         console.log('Applying migration 0000_secret_nightcrawler.sql...\n');
 

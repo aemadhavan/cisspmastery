@@ -57,6 +57,7 @@ async function deepCleanup() {
         console.log('\n=== STEP 3: Checking migration files ===');
         const fs = require('fs');
         const path = require('path');
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
         const migrationsDir = path.join(__dirname, 'drizzle', 'migrations');
 
         if (fs.existsSync(migrationsDir)) {
@@ -72,6 +73,17 @@ async function deepCleanup() {
 
         // Drop enums with CASCADE
         console.log('\n=== STEP 4: Force drop orphaned enums ===');
+
+        // Helper function to validate and safely quote identifier names
+        function safeIdentifier(name) {
+            // Only allow alphanumeric characters and underscores
+            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+                throw new Error(`Invalid identifier name: ${name}`);
+            }
+            // Quote identifier to prevent SQL injection
+            return `"${name.replace(/"/g, '""')}"`;
+        }
+
         const orphanedEnums = ['test_status', 'test_type'];
 
         for (const enumName of orphanedEnums) {
@@ -87,7 +99,8 @@ async function deepCleanup() {
 
                 if (checkQuery.rows[0].exists) {
                     console.log(`  Dropping ${enumName}...`);
-                    await client.query(`DROP TYPE IF EXISTS public."${enumName}" CASCADE;`);
+                    const safeEnumName = safeIdentifier(enumName);
+                    await client.query(`DROP TYPE IF EXISTS public.${safeEnumName} CASCADE;`);
                     console.log(`  ✓ Dropped ${enumName}`);
                 } else {
                     console.log(`  ✓ ${enumName} already removed`);

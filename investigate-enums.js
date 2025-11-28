@@ -62,10 +62,21 @@ async function investigateEnums() {
         // Try dropping with explicit schema and CASCADE
         console.log('\n=== Attempting to Drop Enums ===');
 
+        // Helper function to validate and safely quote identifier names
+        function safeIdentifier(name) {
+            // Only allow alphanumeric characters and underscores
+            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+                throw new Error(`Invalid identifier name: ${name}`);
+            }
+            // Quote identifier to prevent SQL injection
+            return `"${name.replace(/"/g, '""')}"`;
+        }
+
         for (const enumName of ['test_status', 'test_type']) {
             try {
                 console.log(`\nDropping ${enumName}...`);
-                const dropResult = await client.query(`DROP TYPE IF EXISTS public.${enumName} CASCADE`);
+                const safeEnumName = safeIdentifier(enumName);
+                const dropResult = await client.query(`DROP TYPE IF EXISTS public.${safeEnumName} CASCADE`);
                 console.log(`  Command: ${dropResult.command}`);
                 console.log(`  Rows affected: ${dropResult.rowCount}`);
                 console.log(`  ✓ Drop command executed`);

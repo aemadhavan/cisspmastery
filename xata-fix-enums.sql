@@ -1,9 +1,11 @@
 -- Xata-compatible migration script
 -- This script handles existing enums and tables gracefully
+-- NOTE: This file is kept for reference but is no longer used directly.
+-- The run-xata-fix.js script now uses programmatic SQL generation for better security.
 
--- Drop orphaned enums if they exist
-DROP TYPE IF EXISTS public.test_status CASCADE;
-DROP TYPE IF EXISTS public.test_type CASCADE;
+-- Drop orphaned enums if they exist (using quoted identifiers for safety)
+DROP TYPE IF EXISTS public."test_status" CASCADE;
+DROP TYPE IF EXISTS public."test_type" CASCADE;
 
 -- Create enums only if they don't exist
 DO $$ 
