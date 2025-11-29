@@ -174,7 +174,7 @@ npm run dev
 #### Domains
 - `GET /api/domains` - Fetch all domains with card counts
 
-#### Flashcards
+#### Flashcards (Public)
 - `GET /api/domains/[domainId]/flashcards` - Fetch flashcards for a domain
 
 #### Progress
@@ -184,7 +184,7 @@ npm run dev
 
 ### Admin API (Admin Role Required)
 
-#### Flashcards
+#### Flashcards (Admin)
 - `GET /api/admin/flashcards` - List all flashcards
 - `POST /api/admin/flashcards` - Create new flashcard
 - `PATCH /api/admin/flashcards/[id]` - Update flashcard
