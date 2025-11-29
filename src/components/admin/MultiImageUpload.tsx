@@ -69,6 +69,38 @@ export function MultiImageUpload({
     return { valid: true };
   };
 
+  const createMediaFile = (file: File, currentCount: number, newImagesCount: number): MediaFile => {
+    const url = URL.createObjectURL(file);
+
+    return {
+      file,
+      url,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+      placement,
+      order: currentCount + newImagesCount,
+      uploading: false,
+    };
+  };
+
+  const processFiles = (files: File[], currentCount: number): MediaFile[] => {
+    const newImages: MediaFile[] = [];
+
+    for (const file of files) {
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        toast.error(validation.error || "Invalid file");
+        continue;
+      }
+
+      const newImage = createMediaFile(file, currentCount, newImages.length);
+      newImages.push(newImage);
+    }
+
+    return newImages;
+  };
+
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -81,31 +113,7 @@ export function MultiImageUpload({
     }
 
     const filesToProcess = Array.from(files).slice(0, availableSlots);
-    const newImages: MediaFile[] = [];
-
-    for (const file of filesToProcess) {
-      const validation = validateFile(file);
-      if (!validation.valid) {
-        toast.error(validation.error || "Invalid file");
-        continue;
-      }
-
-      // Create preview URL
-      const url = URL.createObjectURL(file);
-
-      const newImage: MediaFile = {
-        file,
-        url,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        placement,
-        order: currentCount + newImages.length,
-        uploading: false,
-      };
-
-      newImages.push(newImage);
-    }
+    const newImages = processFiles(filesToProcess, currentCount);
 
     if (newImages.length > 0) {
       handleImagesUpdate([...images, ...newImages]);

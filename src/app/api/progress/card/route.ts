@@ -8,6 +8,35 @@ import { withErrorHandling } from '@/lib/api/error-handler';
 import { withTracing } from '@/lib/middleware/with-tracing';
 
 /**
+ * Calculate mastery status based on confidence level
+ */
+function calculateMasteryStatus(confidenceLevel: number): 'new' | 'learning' | 'mastered' {
+  if (confidenceLevel >= 4) return 'mastered';
+  if (confidenceLevel >= 3) return 'learning';
+  return 'new';
+}
+
+/**
+ * Calculate next review date based on confidence level (spaced repetition)
+ */
+function calculateNextReviewDate(confidenceLevel: number): Date {
+  const now = new Date();
+  let daysUntilReview: number;
+
+  if (confidenceLevel === 5) {
+    daysUntilReview = 7;
+  } else if (confidenceLevel === 4) {
+    daysUntilReview = 3;
+  } else if (confidenceLevel === 3) {
+    daysUntilReview = 1;
+  } else {
+    daysUntilReview = 0.5;
+  }
+
+  return new Date(now.getTime() + daysUntilReview * 24 * 60 * 60 * 1000);
+}
+
+/**
  * Ensure user exists in database, create if not
  */
 async function ensureUserExists(userId: string) {
@@ -113,15 +142,13 @@ async function saveCardProgress(request: NextRequest) {
 
     let progress;
 
+    const now = new Date();
+    const masteryStatus = calculateMasteryStatus(confidenceLevel);
+    const nextReviewDate = calculateNextReviewDate(confidenceLevel);
+
     if (existingProgress) {
       // Update existing progress
       const newTimesSeen = (existingProgress.timesSeen || 0) + 1;
-      const newMasteryStatus = confidenceLevel >= 4 ? 'mastered' : confidenceLevel >= 3 ? 'learning' : 'new';
-
-      // Calculate next review date based on confidence level (spaced repetition)
-      const now = new Date();
-      const daysUntilReview = confidenceLevel === 5 ? 7 : confidenceLevel === 4 ? 3 : confidenceLevel === 3 ? 1 : 0.5;
-      const nextReviewDate = new Date(now.getTime() + daysUntilReview * 24 * 60 * 60 * 1000);
 
       [progress] = await db
         .update(userCardProgress)
@@ -130,7 +157,7 @@ async function saveCardProgress(request: NextRequest) {
           timesSeen: newTimesSeen,
           lastSeen: now,
           nextReviewDate,
-          masteryStatus: newMasteryStatus as 'new' | 'learning' | 'mastered',
+          masteryStatus,
           updatedAt: now,
         })
         .where(eq(userCardProgress.id, existingProgress.id))
@@ -138,11 +165,6 @@ async function saveCardProgress(request: NextRequest) {
 
     } else {
       // Create new progress record
-      const now = new Date();
-      const daysUntilReview = confidenceLevel === 5 ? 7 : confidenceLevel === 4 ? 3 : confidenceLevel === 3 ? 1 : 0.5;
-      const nextReviewDate = new Date(now.getTime() + daysUntilReview * 24 * 60 * 60 * 1000);
-      const masteryStatus = confidenceLevel >= 4 ? 'mastered' : confidenceLevel >= 3 ? 'learning' : 'new';
-
       [progress] = await db
         .insert(userCardProgress)
         .values({
@@ -152,7 +174,7 @@ async function saveCardProgress(request: NextRequest) {
           timesSeen: 1,
           lastSeen: now,
           nextReviewDate,
-          masteryStatus: masteryStatus as 'new' | 'learning' | 'mastered',
+          masteryStatus,
         })
         .returning();
     }

@@ -6,6 +6,97 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { withErrorHandling } from '@/lib/api/error-handler';
 import { withTracing } from '@/lib/middleware/with-tracing';
 
+type FlashcardWithMeta = {
+  id: string;
+  [key: string]: unknown;
+};
+
+type ProgressRecord = {
+  flashcardId: string;
+  confidenceLevel: number | null;
+  nextReviewDate: Date | null;
+  lastSeen: Date | null;
+  [key: string]: unknown;
+};
+
+/**
+ * Check if a card needs review in progressive mode
+ */
+function shouldIncludeInProgressiveMode(
+  progress: ProgressRecord | undefined,
+  now: Date
+): boolean {
+  // Include cards that haven't been studied yet
+  if (!progress) return true;
+
+  // Include cards with low confidence (< 4)
+  if (progress.confidenceLevel !== null && progress.confidenceLevel < 4) return true;
+
+  // Include cards that are due for review
+  if (progress.nextReviewDate && new Date(progress.nextReviewDate) <= now) return true;
+
+  return false;
+}
+
+/**
+ * Sort cards for progressive mode study
+ */
+function sortCardsForProgressiveMode(
+  a: FlashcardWithMeta,
+  b: FlashcardWithMeta,
+  progressMap: Map<string, ProgressRecord>
+): number {
+  const progressA = progressMap.get(a.id);
+  const progressB = progressMap.get(b.id);
+
+  // Cards not studied come first
+  if (!progressA && progressB) return -1;
+  if (progressA && !progressB) return 1;
+  if (!progressA && !progressB) return 0;
+
+  // Then by confidence level (lowest first)
+  const confidenceA = progressA?.confidenceLevel ?? 0;
+  const confidenceB = progressB?.confidenceLevel ?? 0;
+  if (confidenceA !== confidenceB) {
+    return confidenceA - confidenceB;
+  }
+
+  // Then by last seen (oldest first)
+  const dateA = progressA?.lastSeen ? new Date(progressA.lastSeen).getTime() : 0;
+  const dateB = progressB?.lastSeen ? new Date(progressB.lastSeen).getTime() : 0;
+  return dateA - dateB;
+}
+
+/**
+ * Apply study mode logic to flashcards
+ */
+function applyStudyMode(
+  mode: string,
+  allFlashcards: FlashcardWithMeta[],
+  progressMap: Map<string, ProgressRecord>
+): FlashcardWithMeta[] {
+  switch (mode) {
+    case 'progressive': {
+      const now = new Date();
+      let studyCards = allFlashcards.filter(card =>
+        shouldIncludeInProgressiveMode(progressMap.get(card.id), now)
+      );
+
+      studyCards.sort((a, b) => sortCardsForProgressiveMode(a, b, progressMap));
+
+      // If no cards need review, show all cards (user has mastered everything)
+      return studyCards.length === 0 ? allFlashcards : studyCards;
+    }
+
+    case 'random':
+      return [...allFlashcards].sort(() => Math.random() - 0.5);
+
+    case 'all':
+    default:
+      return allFlashcards;
+  }
+}
+
 /**
  * GET /api/classes/[id]/study?mode=progressive|random|all&decks=deck1,deck2
  * Get flashcards for studying a class based on the selected mode
@@ -106,69 +197,7 @@ async function getClassStudyCards(
     );
 
     // Apply study mode logic
-    let studyCards = allFlashcards;
-
-    switch (mode) {
-      case 'progressive':
-        // Focus on cards that need review (low confidence or due for review)
-        const now = new Date();
-
-        studyCards = allFlashcards.filter(card => {
-          const progress = progressMap.get(card.id);
-
-          // Include cards that:
-          // 1. Haven't been studied yet
-          if (!progress) return true;
-
-          // 2. Have low confidence (< 4)
-          if (progress.confidenceLevel !== null && progress.confidenceLevel < 4) return true;
-
-          // 3. Are due for review
-          if (progress.nextReviewDate && new Date(progress.nextReviewDate) <= now) return true;
-
-          return false;
-        });
-
-        // Sort by: not studied > due for review > low confidence > last seen (oldest first)
-        studyCards.sort((a, b) => {
-          const progressA = progressMap.get(a.id);
-          const progressB = progressMap.get(b.id);
-
-          // Cards not studied come first
-          if (!progressA && progressB) return -1;
-          if (progressA && !progressB) return 1;
-          if (!progressA && !progressB) return 0;
-
-          // Then by confidence level (lowest first)
-          const confidenceA = progressA?.confidenceLevel ?? 0;
-          const confidenceB = progressB?.confidenceLevel ?? 0;
-          if (confidenceA !== confidenceB) {
-            return confidenceA - confidenceB;
-          }
-
-          // Then by last seen (oldest first)
-          const dateA = progressA?.lastSeen ? new Date(progressA.lastSeen).getTime() : 0;
-          const dateB = progressB?.lastSeen ? new Date(progressB.lastSeen).getTime() : 0;
-          return dateA - dateB;
-        });
-
-        // If no cards need review, show all cards (user has mastered everything)
-        if (studyCards.length === 0) {
-          studyCards = allFlashcards;
-        }
-        break;
-
-      case 'random':
-        // Shuffle cards randomly
-        studyCards = [...allFlashcards].sort(() => Math.random() - 0.5);
-        break;
-
-      case 'all':
-      default:
-        // Show all cards in their original order
-        studyCards = allFlashcards;
-        break;
-    }
+    const studyCards = applyStudyMode(mode, allFlashcards, progressMap);
 
     return NextResponse.json({
       flashcards: studyCards,

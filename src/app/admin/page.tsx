@@ -4,6 +4,75 @@ import { sql } from "drizzle-orm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users as UsersIcon, BookOpen, TrendingUp } from "lucide-react";
 
+interface DashboardStats {
+  totalUsers: number;
+  totalClasses: number;
+  totalFlashcards: number;
+  totalProgress: number;
+}
+
+/**
+ * Extract count from database query result
+ */
+function extractCount(result: { count: number }[]): number {
+  return result[0]?.count || 0;
+}
+
+/**
+ * Process stats from database queries
+ */
+function processStats(stats: { count: number }[][]): DashboardStats {
+  const [userCount, classCount, flashcardCount, progressCount] = stats;
+
+  return {
+    totalUsers: extractCount(userCount),
+    totalClasses: extractCount(classCount),
+    totalFlashcards: extractCount(flashcardCount),
+    totalProgress: extractCount(progressCount),
+  };
+}
+
+/**
+ * Get user role badge styling
+ */
+function getUserRoleBadgeClass(role: string): string {
+  return role === 'admin'
+    ? 'bg-purple-500/20 text-purple-400'
+    : 'bg-blue-500/20 text-blue-400';
+}
+
+interface RecentUserCardProps {
+  user: {
+    clerkUserId: string;
+    name: string | null;
+    email: string;
+    createdAt: Date;
+    role: string;
+  };
+}
+
+function RecentUserCard({ user }: RecentUserCardProps) {
+  return (
+    <div
+      key={user.clerkUserId}
+      className="flex items-center justify-between py-2 border-b border-slate-700 last:border-0"
+    >
+      <div>
+        <p className="font-medium text-white">{user.name || 'Unknown'}</p>
+        <p className="text-sm text-gray-400">{user.email}</p>
+      </div>
+      <div className="text-right">
+        <p className="text-sm text-gray-400">
+          {new Date(user.createdAt).toLocaleDateString()}
+        </p>
+        <span className={`text-xs px-2 py-1 rounded ${getUserRoleBadgeClass(user.role)}`}>
+          {user.role}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default async function AdminDashboardPage() {
   // Get statistics
   const [stats] = await Promise.all([
@@ -15,12 +84,7 @@ export default async function AdminDashboardPage() {
     ])
   ]);
 
-  const [userCount, classCount, flashcardCount, progressCount] = stats;
-
-  const totalUsers = userCount[0]?.count || 0;
-  const totalClasses = classCount[0]?.count || 0;
-  const totalFlashcards = flashcardCount[0]?.count || 0;
-  const totalProgress = progressCount[0]?.count || 0;
+  const { totalUsers, totalClasses, totalFlashcards, totalProgress } = processStats(stats);
 
   // Get recent activity
   const recentUsers = await db.query.users.findMany({
@@ -120,32 +184,13 @@ export default async function AdminDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {recentUsers.length === 0 ? (
+          {recentUsers.length === 0 && (
             <p className="text-gray-400">No users yet</p>
-          ) : (
+          )}
+          {recentUsers.length > 0 && (
             <div className="space-y-4">
               {recentUsers.map((user) => (
-                <div
-                  key={user.clerkUserId}
-                  className="flex items-center justify-between py-2 border-b border-slate-700 last:border-0"
-                >
-                  <div>
-                    <p className="font-medium text-white">{user.name || 'Unknown'}</p>
-                    <p className="text-sm text-gray-400">{user.email}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-400">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </p>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      user.role === 'admin'
-                        ? 'bg-purple-500/20 text-purple-400'
-                        : 'bg-blue-500/20 text-blue-400'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </div>
-                </div>
+                <RecentUserCard key={user.clerkUserId} user={user} />
               ))}
             </div>
           )}
