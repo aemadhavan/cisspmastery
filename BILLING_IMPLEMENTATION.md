@@ -2,7 +2,7 @@
 
 This project uses Clerk's billing feature to manage subscriptions for CISSP Mastery.
 
-## Plans
+## Plans 
 
 Based on your Clerk dashboard setup:
 
