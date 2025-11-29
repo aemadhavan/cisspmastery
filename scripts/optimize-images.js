@@ -12,7 +12,7 @@ async function optimizeImages() {
     if (!resolvedPath.startsWith(resolvedPublicDir)) {
       throw new Error(`Security Error: Access denied for path ${filePath}`);
     }
-    return filePath;
+    return resolvedPath;
   };
 
   console.log('🖼️  Optimizing images...\n');

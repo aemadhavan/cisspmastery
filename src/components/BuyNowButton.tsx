@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, Loader2, X } from "lucide-react";
+import { isValidUrl } from "@/lib/middleware/request-validation";
 
 interface BuyNowButtonProps {
   priceId: string;
@@ -42,6 +43,10 @@ export default function BuyNowButton({
 
       // Redirect to Stripe Checkout using the URL
       if (data.url) {
+        // Validate URL to prevent open redirect vulnerability
+        if (!isValidUrl(data.url)) {
+          throw new Error("Invalid checkout URL returned");
+        }
         window.location.href = data.url;
       } else {
         throw new Error("No checkout URL returned");

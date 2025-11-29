@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const format = require('pg-format');
 require('dotenv').config({ path: '.env.local' });
 
 async function fixMigrations() {
@@ -78,8 +79,8 @@ async function fixMigrations() {
     const orphanedEnums = ['test_status', 'test_type'];
     for (const enumName of orphanedEnums) {
       try {
-        const safeEnumName = safeIdentifier(enumName);
-        await client.query(`DROP TYPE IF EXISTS public.${safeEnumName} CASCADE;`);
+        const sql = format('DROP TYPE IF EXISTS public.%I CASCADE;', enumName);
+        await client.query(sql);
         console.log(`   ✓ Dropped ${enumName}`);
       } catch (err) {
         console.log(`   ✗ Error: ${err.message}`);

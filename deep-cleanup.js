@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const format = require('pg-format');
 require('dotenv').config({ path: '.env.local' });
 
 async function deepCleanup() {
@@ -99,8 +100,8 @@ async function deepCleanup() {
 
                 if (checkQuery.rows[0].exists) {
                     console.log(`  Dropping ${enumName}...`);
-                    const safeEnumName = safeIdentifier(enumName);
-                    await client.query(`DROP TYPE IF EXISTS public.${safeEnumName} CASCADE;`);
+                    const sql = format('DROP TYPE IF EXISTS public.%I CASCADE;', enumName);
+                    await client.query(sql);
                     console.log(`  ✓ Dropped ${enumName}`);
                 } else {
                     console.log(`  ✓ ${enumName} already removed`);
