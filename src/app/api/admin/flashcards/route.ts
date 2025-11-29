@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
-import { flashcards, flashcardMedia, quizQuestions } from '@/lib/db/schema';
+import { flashcards, flashcardMedia, quizQuestions, decks } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { createFlashcardSchema } from '@/lib/validations/flashcard';
 import { validateQuizFile } from '@/lib/validations/quiz';
 import { withErrorHandling } from '@/lib/api/error-handler';
 import { withTracing } from '@/lib/middleware/with-tracing';
+import { cache } from '@/lib/redis';
+import { CacheKeys } from '@/lib/redis/cache-keys';
 
 /**
  * POST /api/admin/flashcards
@@ -89,6 +91,27 @@ async function createFlashcard(request: NextRequest) {
           }))
         );
       }
+    }
+
+    // Invalidate cache after successful creation
+    try {
+      const deckId = validatedData.deckId;
+
+      // Get the deck to find the classId for domain cache invalidation
+      const deck = await db.query.decks.findFirst({
+        where: eq(decks.id, deckId),
+      });
+
+      // Invalidate deck flashcards cache
+      await cache.del(CacheKeys.deck.flashcards(deckId));
+
+      // Invalidate domain flashcards cache if deck exists
+      if (deck) {
+        await cache.del(CacheKeys.domainFlashcards.all(deck.classId));
+      }
+    } catch (error) {
+      console.error('Error invalidating cache after flashcard creation:', error);
+      // Continue even if cache invalidation fails
     }
 
     return NextResponse.json({

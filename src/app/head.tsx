@@ -22,16 +22,14 @@ export default function Head() {
       <link rel="dns-prefetch" href="https://o4509370465058816.ingest.us.sentry.io" />
 
       {/* Inline critical CSS for instant rendering */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            body { margin: 0; }
-            .min-h-screen { min-height: 100vh; }
-            /* Prevent layout shift for header */
-            header { height: 64px; }
-          `,
-        }}
-      />
+      <style>
+        {`
+          body { margin: 0; }
+          .min-h-screen { min-height: 100vh; }
+          /* Prevent layout shift for header */
+          header { height: 64px; }
+        `}
+      </style>
     </>
   );
 }

@@ -222,6 +222,7 @@ export default function Flashcard({
             {/* Scrollable content area */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(600px - 120px)' }}>
               <div className="flex flex-col items-center">
+                {/* nosemgrep: react-dangerouslysetinnerhtml - Content is sanitized with DOMPurify using strict allowlist */}
                 <div
                   className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
                   dangerouslySetInnerHTML={{ __html: sanitizedQuestion }}
@@ -318,6 +319,7 @@ export default function Flashcard({
             {/* Scrollable content area */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(600px - 120px)' }}>
               <div className="flex flex-col items-center">
+                {/* nosemgrep: react-dangerouslysetinnerhtml - Content is sanitized with DOMPurify using strict allowlist */}
                 <div
                   className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
                   dangerouslySetInnerHTML={{ __html: sanitizedAnswer }}
