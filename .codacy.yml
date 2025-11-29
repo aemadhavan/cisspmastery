@@ -1,0 +1,33 @@
+---
+exclude_paths:
+  - 'drizzle/migrations/**'
+  - '**/*.sql'
+  - 'scripts/*.sql'
+  - 'migration*.sql'
+  - 'cleanup*.sql'
+
+engines:
+  # Disable SCSS-specific linters for Tailwind CSS files
+  stylelint:
+    exclude_paths:
+      - 'src/app/globals.css'
+  
+  # Disable SQL Server-specific linters (we use PostgreSQL)
+  sqlint:
+    enabled: false
+  
+  # Keep other engines enabled with default settings
+  eslint:
+    enabled: true
+  
+  typescript:
+    enabled: true
+
+# Exclude patterns that should not be analyzed
+exclude_patterns:
+  - '**/*.sql'
+  - 'drizzle/migrations/**'
+  - 'node_modules/**'
+  - '.next/**'
+  - 'dist/**'
+  - 'build/**'
