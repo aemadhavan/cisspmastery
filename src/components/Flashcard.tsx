@@ -15,6 +15,69 @@ interface FlashcardMedia {
   order: number;
 }
 
+/**
+ * Reusable component for rendering flashcard content (question or answer)
+ * with scrollable area and sanitized HTML
+ */
+interface FlashcardContentAreaProps {
+  sanitizedHtml: string;
+  images: FlashcardMedia[];
+  onImageClick: (e: React.MouseEvent, img: FlashcardMedia) => void;
+  borderColor: string;
+  hoverBgColor: string;
+}
+
+function FlashcardContentArea({
+  sanitizedHtml,
+  images,
+  onImageClick,
+  borderColor,
+  hoverBgColor,
+}: FlashcardContentAreaProps) {
+  return (
+    <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(600px - 120px)' }}>
+      <div className="flex flex-col items-center">
+        {/* nosemgrep: react-dangerouslysetinnerhtml - Content is sanitized with DOMPurify using strict allowlist */}
+        <div
+          className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+        />
+
+        {/* Images - Grid layout for multiple images */}
+        {images.length > 0 && (
+          <div className={`w-full ${images.length === 1
+              ? 'max-w-xl'
+              : images.length === 2
+                ? 'grid grid-cols-2 gap-4'
+                : 'grid grid-cols-2 gap-4'
+            }`}>
+            {images.map((img) => (
+              <div
+                key={img.id}
+                className="relative w-full group cursor-zoom-in"
+                onClick={(e) => onImageClick(e, img)}
+              >
+                <Image
+                  src={img.url}
+                  alt={img.altText || 'Flashcard image'}
+                  width={500}
+                  height={300}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 500px"
+                  className={`rounded-lg border ${borderColor} object-contain w-full h-auto max-h-64 transition-opacity group-hover:opacity-90`}
+                  loading="lazy"
+                />
+                <div className={`absolute top-2 right-2 ${hoverBgColor} text-white p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity`}>
+                  <ZoomIn className="w-4 h-4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface FlashcardProps {
   question: string;
   answer: string;
@@ -220,46 +283,13 @@ export default function Flashcard({
             </div>
 
             {/* Scrollable content area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(600px - 120px)' }}>
-              <div className="flex flex-col items-center">
-                {/* nosemgrep: react-dangerouslysetinnerhtml - Content is sanitized with DOMPurify using strict allowlist */}
-                <div
-                  className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizedQuestion }}
-                />
-
-                {/* Question Images - Grid layout for multiple images */}
-                {questionImages.length > 0 && (
-                  <div className={`w-full ${questionImages.length === 1
-                      ? 'max-w-xl'
-                      : questionImages.length === 2
-                        ? 'grid grid-cols-2 gap-4'
-                        : 'grid grid-cols-2 gap-4'
-                    }`}>
-                    {questionImages.map((img) => (
-                      <div
-                        key={img.id}
-                        className="relative w-full group cursor-zoom-in"
-                        onClick={(e) => handleImageClick(e, img)}
-                      >
-                        <Image
-                          src={img.url}
-                          alt={img.altText || 'Question image'}
-                          width={500}
-                          height={300}
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 500px"
-                          className="rounded-lg border border-slate-600 object-contain w-full h-auto max-h-64 transition-opacity group-hover:opacity-90"
-                          loading="lazy"
-                        />
-                        <div className="absolute top-2 right-2 bg-slate-900/70 text-white p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ZoomIn className="w-4 h-4" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <FlashcardContentArea
+              sanitizedHtml={sanitizedQuestion}
+              images={questionImages}
+              onImageClick={handleImageClick}
+              borderColor="border-slate-600"
+              hoverBgColor="bg-slate-900/70"
+            />
 
             <div className="flex-shrink-0 mt-3 sm:mt-4 text-center text-xs sm:text-sm text-gray-400">
               Click to reveal answer
@@ -317,46 +347,13 @@ export default function Flashcard({
             </div>
 
             {/* Scrollable content area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(600px - 120px)' }}>
-              <div className="flex flex-col items-center">
-                {/* nosemgrep: react-dangerouslysetinnerhtml - Content is sanitized with DOMPurify using strict allowlist */}
-                <div
-                  className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizedAnswer }}
-                />
-
-                {/* Answer Images - Grid layout for multiple images */}
-                {answerImages.length > 0 && (
-                  <div className={`w-full ${answerImages.length === 1
-                      ? 'max-w-xl'
-                      : answerImages.length === 2
-                        ? 'grid grid-cols-2 gap-4'
-                        : 'grid grid-cols-2 gap-4'
-                    }`}>
-                    {answerImages.map((img) => (
-                      <div
-                        key={img.id}
-                        className="relative w-full group cursor-zoom-in"
-                        onClick={(e) => handleImageClick(e, img)}
-                      >
-                        <Image
-                          src={img.url}
-                          alt={img.altText || 'Answer image'}
-                          width={500}
-                          height={300}
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 500px"
-                          className="rounded-lg border border-purple-400 object-contain w-full h-auto max-h-64 transition-opacity group-hover:opacity-90"
-                          loading="lazy"
-                        />
-                        <div className="absolute top-2 right-2 bg-purple-900/70 text-white p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ZoomIn className="w-4 h-4" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <FlashcardContentArea
+              sanitizedHtml={sanitizedAnswer}
+              images={answerImages}
+              onImageClick={handleImageClick}
+              borderColor="border-purple-400"
+              hoverBgColor="bg-purple-900/70"
+            />
 
             <div className="flex-shrink-0 mt-3 sm:mt-4 text-center text-xs sm:text-sm text-purple-200">
               Click to see question

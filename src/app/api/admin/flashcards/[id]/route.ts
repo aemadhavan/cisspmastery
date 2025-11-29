@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db';
-import { flashcards, flashcardMedia, quizQuestions, decks } from '@/lib/db/schema';
+import { flashcards, flashcardMedia, quizQuestions } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { updateFlashcardSchema } from '@/lib/validations/flashcard';
-import { validateQuizFile } from '@/lib/validations/quiz';
 import { deleteMultipleImagesFromBlob } from '@/lib/blob';
 import { withErrorHandling } from '@/lib/api/error-handler';
 import { withTracing } from '@/lib/middleware/with-tracing';
-import { cache } from '@/lib/redis';
-import { CacheKeys } from '@/lib/redis/cache-keys';
+import { invalidateFlashcardCache } from '@/lib/flashcard/cache';
+import { insertQuizQuestions } from '@/lib/flashcard/quiz';
 
 /**
  * PATCH /api/admin/flashcards/[id]
@@ -124,54 +123,18 @@ async function updateFlashcard(
       await db.delete(quizQuestions).where(eq(quizQuestions.flashcardId, id));
 
       if (quizData) {
-        const quizValidation = validateQuizFile(quizData);
-        if (!quizValidation.success) {
+        const result = await insertQuizQuestions(id, quizData, admin.clerkUserId);
+        if (!result.success) {
           return NextResponse.json(
-            { error: `Invalid quiz data: ${quizValidation.error}` },
+            { error: result.error },
             { status: 400 }
-          );
-        }
-
-        if (quizValidation.data.questions.length > 0) {
-          await db.insert(quizQuestions).values(
-            quizValidation.data.questions.map((q, index) => ({
-              flashcardId: id,
-              questionText: q.question,
-              options: q.options,
-              explanation: q.explanation || null,
-              eliminationTactics: q.elimination_tactics ? JSON.stringify(q.elimination_tactics) : null,
-              correctAnswerWithJustification: q.correct_answer_with_justification ? JSON.stringify(q.correct_answer_with_justification) : null,
-              compareRemainingOptionsWithJustification: q.compare_remaining_options_with_justification ? JSON.stringify(q.compare_remaining_options_with_justification) : null,
-              correctOptionsJustification: q.correct_options_justification ? JSON.stringify(q.correct_options_justification) : null,
-              order: index,
-              difficulty: null,
-              createdBy: admin.clerkUserId,
-            }))
           );
         }
       }
     }
 
     // Invalidate cache after successful update
-    try {
-      const deckId = existingFlashcard.deckId;
-
-      // Get the deck to find the classId for domain cache invalidation
-      const deck = await db.query.decks.findFirst({
-        where: eq(decks.id, deckId),
-      });
-
-      // Invalidate deck flashcards cache
-      await cache.del(CacheKeys.deck.flashcards(deckId));
-
-      // Invalidate domain flashcards cache if deck exists
-      if (deck) {
-        await cache.del(CacheKeys.domainFlashcards.all(deck.classId));
-      }
-    } catch (error) {
-      console.error('Error invalidating cache after flashcard update:', error);
-      // Continue even if cache invalidation fails
-    }
+    await invalidateFlashcardCache(existingFlashcard.deckId);
 
     return NextResponse.json({
       success: true,
@@ -232,25 +195,7 @@ async function deleteFlashcard(
     await db.delete(flashcards).where(eq(flashcards.id, id));
 
     // Invalidate cache after successful deletion
-    try {
-      const deckId = existingFlashcard.deckId;
-
-      // Get the deck to find the classId for domain cache invalidation
-      const deck = await db.query.decks.findFirst({
-        where: eq(decks.id, deckId),
-      });
-
-      // Invalidate deck flashcards cache
-      await cache.del(CacheKeys.deck.flashcards(deckId));
-
-      // Invalidate domain flashcards cache if deck exists
-      if (deck) {
-        await cache.del(CacheKeys.domainFlashcards.all(deck.classId));
-      }
-    } catch (error) {
-      console.error('Error invalidating cache after flashcard deletion:', error);
-      // Continue even if cache invalidation fails
-    }
+    await invalidateFlashcardCache(existingFlashcard.deckId);
 
     return NextResponse.json({
       success: true,
