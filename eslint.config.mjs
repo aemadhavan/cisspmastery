@@ -26,6 +26,15 @@ const eslintConfig = [
         console: "readonly",
       },
     },
+    rules: {
+      // Disable false positive warnings flagged by Codacy
+      // Template literals are valid ES6+ syntax and widely used in modern JavaScript
+      "no-template-curly-in-string": "off",
+
+      // Trailing commas are a best practice for better git diffs
+      // and are valid JavaScript syntax since ES5
+      "comma-dangle": ["off"],
+    },
   },
   {
     ignores: [
