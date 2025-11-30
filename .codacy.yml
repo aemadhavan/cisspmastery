@@ -21,6 +21,7 @@ exclude_paths:
   - 'fix-test-status.js'
   - 'final-cleanup.js'
   - 'force-cleanup.js'
+  - 'apply-migration.js'
   - 'src/components/admin/RichTextEditor.tsx'
   - 'src/app/api/checkout/route.ts'
   - 'src/app/api/webhooks/clerk/route.ts'
