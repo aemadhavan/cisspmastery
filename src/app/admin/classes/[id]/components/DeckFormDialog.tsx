@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { type QuizFile } from "@/lib/validations/quiz";
+import { QuizFileUpload } from "./QuizFileUpload";
 
 interface DeckFormData {
   name: string;
@@ -61,17 +62,28 @@ export function DeckFormDialog({
   onSave,
   isSaving,
 }: DeckFormDialogProps) {
+  const isEditMode = Boolean(deck);
+  const dialogTitle = isEditMode ? "Edit Deck" : "Create New Deck";
+  const dialogDescription = isEditMode
+    ? "Update the deck details below"
+    : "Add a new deck to this class";
+  const saveButtonText = isEditMode ? "Update" : "Create";
+  const isQuizType = formData.type === 'quiz';
+
+  const updateFormField = <K extends keyof DeckFormData>(
+    field: K,
+    value: DeckFormData[K]
+  ) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {deck ? "Edit Deck" : "Create New Deck"}
-          </DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription className="text-gray-400">
-            {deck
-              ? "Update the deck details below"
-              : "Add a new deck to this class"}
+            {dialogDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -81,7 +93,7 @@ export function DeckFormDialog({
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => updateFormField('name', e.target.value)}
               placeholder="e.g., Security Architecture and Engineering"
               className="bg-slate-900 border-slate-700 text-white"
             />
@@ -92,7 +104,7 @@ export function DeckFormDialog({
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) => updateFormField('description', e.target.value)}
               placeholder="Brief description of this deck..."
               className="bg-slate-900 border-slate-700 text-white min-h-[100px]"
             />
@@ -103,19 +115,16 @@ export function DeckFormDialog({
             <select
               id="type"
               value={formData.type}
-              onChange={(e) => {
-                const newType = e.target.value as 'flashcard' | 'quiz';
-                setFormData({ ...formData, type: newType });
-              }}
+              onChange={(e) => updateFormField('type', e.target.value as 'flashcard' | 'quiz')}
               className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="flashcard">Flashcard</option>
               <option value="quiz">Quiz</option>
             </select>
             <p className="text-xs text-gray-400">
-              {formData.type === 'flashcard'
-                ? 'Traditional flashcard deck with questions and answers'
-                : 'Quiz deck with multiple-choice questions (requires JSON file upload)'}
+              {isQuizType
+                ? 'Quiz deck with multiple-choice questions (requires JSON file upload)'
+                : 'Traditional flashcard deck with questions and answers'}
             </p>
           </div>
 
@@ -125,7 +134,7 @@ export function DeckFormDialog({
               id="order"
               type="number"
               value={formData.order}
-              onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
+              onChange={(e) => updateFormField('order', parseInt(e.target.value) || 0)}
               className="bg-slate-900 border-slate-700 text-white"
               min={0}
             />
@@ -134,63 +143,14 @@ export function DeckFormDialog({
             </p>
           </div>
 
-          {formData.type === 'quiz' && (
-            <div className="space-y-2">
-              <Label htmlFor="deckQuiz">
-                Quiz Questions File {formData.type === 'quiz' && '*'}
-              </Label>
-              <p className="text-xs text-gray-400">
-                Upload a JSON file with multiple-choice questions for this quiz deck
-              </p>
-
-              <Input
-                id="deckQuiz"
-                type="file"
-                accept=".json"
-                onChange={quizFile.onFileSelect}
-                className="bg-slate-900 border-slate-700 text-white cursor-pointer"
-              />
-
-              {quizFile.data && (
-                <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-300">
-                        ✓ {quizFile.data.questions.length} question{quizFile.data.questions.length !== 1 ? 's' : ''} loaded
-                      </p>
-                      <p className="text-xs text-blue-400 mt-1">{quizFile.fileName}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={quizFile.onRemove}
-                      className="text-blue-300 hover:text-blue-100 hover:bg-blue-800"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-blue-700">
-                    <p className="text-xs text-blue-300 font-medium mb-1">Preview:</p>
-                    <div className="space-y-1">
-                      {quizFile.data.questions.slice(0, 2).map((q, idx) => (
-                        <div key={idx} className="text-xs text-blue-200">
-                          <p className="font-medium">Q{idx + 1}: {q.question}</p>
-                          <p className="text-blue-400 ml-2 mt-0.5">
-                            {q.options.length} options, {q.options.filter(o => o.isCorrect).length} correct
-                          </p>
-                        </div>
-                      ))}
-                      {quizFile.data.questions.length > 2 && (
-                        <p className="text-xs text-blue-400 italic">
-                          +{quizFile.data.questions.length - 2} more question(s)...
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+          {isQuizType && (
+            <QuizFileUpload
+              quizData={quizFile.data}
+              fileName={quizFile.fileName}
+              onFileSelect={quizFile.onFileSelect}
+              onRemove={quizFile.onRemove}
+              isRequired
+            />
           )}
 
           <div className="flex items-center justify-between py-2 px-3 bg-slate-900 rounded-lg">
@@ -203,7 +163,7 @@ export function DeckFormDialog({
             <Switch
               id="isPremium"
               checked={formData.isPremium}
-              onCheckedChange={(checked) => setFormData({ ...formData, isPremium: checked })}
+              onCheckedChange={(checked) => updateFormField('isPremium', checked)}
             />
           </div>
 
@@ -217,7 +177,7 @@ export function DeckFormDialog({
             <Switch
               id="isPublished"
               checked={formData.isPublished}
-              onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
+              onCheckedChange={(checked) => updateFormField('isPublished', checked)}
             />
           </div>
         </div>
@@ -242,7 +202,7 @@ export function DeckFormDialog({
                 Saving...
               </>
             ) : (
-              <>{deck ? "Update" : "Create"} Deck</>
+              <>{saveButtonText} Deck</>
             )}
           </Button>
         </DialogFooter>
