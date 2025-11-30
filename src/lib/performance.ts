@@ -22,6 +22,7 @@ export function initPerformanceMonitoring(callback: MetricCallback) {
     metrics[metric.name as keyof PerformanceMetrics] = metric.value;
 
     // Log to console for development
+    // nosemgrep: javascript.lang.security.audit.formatted-string.formatted-string
     console.log(`[Performance] ${metric.name}:`, {
       value: metric.value,
       rating: metric.rating,

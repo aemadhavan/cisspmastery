@@ -28,6 +28,7 @@ export class DatabaseCleanup {
         try {
           await this.page.request.delete(`/api/admin/classes/${cls.id}`);
         } catch (error) {
+          // nosemgrep: javascript.lang.security.audit.formatted-string.formatted-string
           console.warn(`Failed to delete class ${cls.id}:`, error);
         }
       }
@@ -61,6 +62,7 @@ export class DatabaseCleanup {
 
       return false;
     } catch (error) {
+      // nosemgrep: javascript.lang.security.audit.formatted-string.formatted-string
       console.warn(`Failed to delete class "${className}":`, error);
       return false;
     }

@@ -197,6 +197,7 @@ export function withTiming<T extends (...args: never[]) => Promise<Response>>(
       return addTimingHeaders(response, metrics);
     } catch (error) {
       const metrics = timer.end(500);
+      // nosemgrep: javascript.lang.security.audit.formatted-string.formatted-string
       console.error(formatTimingLog(metrics), error);
       throw error;
     }

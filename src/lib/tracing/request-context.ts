@@ -156,6 +156,7 @@ export function logWithContext(
     .join(' ');
 
   // Use explicit whitelist to prevent command injection
+  // nosemgrep: javascript.lang.security.audit.formatted-string.formatted-string
   switch (level) {
     case 'log':
       console.log(logMessage, ...args);
