@@ -98,6 +98,45 @@ function applyStudyMode(
 }
 
 /**
+ * Build deck query conditions based on class ID and optional deck selection
+ */
+function buildDeckQueryConditions(classId: string, selectedDeckIds: string[] | null) {
+  const conditions = [
+    eq(decks.classId, classId),
+    eq(decks.isPublished, true)
+  ];
+
+  if (selectedDeckIds && selectedDeckIds.length > 0) {
+    conditions.push(inArray(decks.id, selectedDeckIds));
+  }
+
+  return conditions;
+}
+
+/**
+ * Flatten flashcards from decks and add metadata
+ */
+function flattenDeckFlashcards(
+  classDecks: Array<{ name: string; flashcards: Array<{ id: string;[key: string]: unknown }> }>,
+  className: string
+): FlashcardWithMeta[] {
+  return classDecks.flatMap(deck =>
+    deck.flashcards.map(card => ({
+      ...card,
+      deckName: deck.name,
+      className,
+    }))
+  );
+}
+
+/**
+ * Create a map of flashcard ID to progress record
+ */
+function createProgressMap(progressRecords: ProgressRecord[]): Map<string, ProgressRecord> {
+  return new Map(progressRecords.map(p => [p.flashcardId, p]));
+}
+
+/**
  * GET /api/classes/[id]/study?mode=progressive|random|all&decks=deck1,deck2
  * Get flashcards for studying a class based on the selected mode
  * Optional: Filter by specific deck IDs (comma-separated)
@@ -128,18 +167,8 @@ async function getClassStudyCards(
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
     }
 
-    // Build deck query conditions
-    const deckConditions = [
-      eq(decks.classId, classId),
-      eq(decks.isPublished, true)
-    ];
-
-    // If specific decks are selected, filter by those IDs
-    if (selectedDeckIds && selectedDeckIds.length > 0) {
-      deckConditions.push(inArray(decks.id, selectedDeckIds));
-    }
-
-    // Get decks (all or filtered by selection)
+    // Build deck query conditions and fetch decks
+    const deckConditions = buildDeckQueryConditions(classId, selectedDeckIds);
     const classDecks = await db.query.decks.findMany({
       where: and(...deckConditions),
       with: {
@@ -162,13 +191,7 @@ async function getClassStudyCards(
     }
 
     // Flatten all flashcards from all decks
-    const allFlashcards = classDecks.flatMap(deck =>
-      deck.flashcards.map(card => ({
-        ...card,
-        deckName: deck.name,
-        className: classData.name,
-      }))
-    );
+    const allFlashcards = flattenDeckFlashcards(classDecks, classData.name);
 
     if (allFlashcards.length === 0) {
       return NextResponse.json({
@@ -192,9 +215,7 @@ async function getClassStudyCards(
       );
 
     // Create a map of card ID to progress
-    const progressMap = new Map(
-      progressRecords.map(p => [p.flashcardId, p])
-    );
+    const progressMap = createProgressMap(progressRecords);
 
     // Apply study mode logic
     const studyCards = applyStudyMode(mode, allFlashcards, progressMap);

@@ -56,6 +56,38 @@ engines:
   typescript:
     enabled: true
 
+  # Enforce medium NLOC (Number of Lines of Code) limit
+  # Checks if functions exceed 50 lines of code (excluding comments)
+  # 
+  # Note: Codacy's PMD tool reports some false positives for cyclomatic complexity:
+  # - buildDeckValues (complexity 11): Actually simple object creation with null coalescing
+  # - messageContainsKeyword (complexity 10): Simple .some() call, 2 lines of code
+  # - shouldIncludeInProgressiveMode (complexity 23): 3 simple if statements, 17 lines
+  # These are flagged due to how PMD counts operators, not actual code complexity
+  pmd:
+    enabled: true
+    exclude_patterns:
+      - 'test/**'
+      - '**/*.test.ts'
+      - '**/*.test.tsx'
+      - '**/*.spec.ts'
+      - '**/*.spec.tsx'
+      # Exclude lock files and generated files
+      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
+      - 'yarn.lock'
+      # Exclude legal/policy pages (content-heavy by nature)
+      - 'src/app/terms-and-conditions/**'
+      - 'src/app/privacy-policy/**'
+      # Exclude pricing page (content-heavy marketing page)
+      - 'src/app/pricing/**'
+      # Exclude E2E test setup files
+      - 'e2e/**'
+    patterns:
+      - category: CodeStyle
+        parameters:
+          NCSS_METHOD_MINIMUM: 50
+
 # Exclude patterns that should not be analyzed
 exclude_patterns:
   - '**/*.sql'

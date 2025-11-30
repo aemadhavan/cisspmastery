@@ -1,152 +1,54 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { QuizModal } from "@/components/QuizModal";
 import { FlashcardDynamic as Flashcard } from "@/components/FlashcardDynamic";
-import { toast } from "sonner";
-
-interface FlashcardMedia {
-  id: string;
-  fileUrl: string;
-  altText: string | null;
-  placement: string;
-  order: number;
-}
-
-interface BookmarkedCard {
-  id: string;
-  flashcardId: string;
-  question: string;
-  answer: string;
-  deckId: string;
-  deckName: string;
-  classId: string;
-  className: string;
-  bookmarkedAt: string;
-  media: FlashcardMedia[];
-}
+import { useBookmarkLoader } from "../hooks/useBookmarkLoader";
+import { useCardNavigation } from "../hooks/useCardNavigation";
+import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
+import { useBookmarkToggle } from "../hooks/useBookmarkToggle";
+import { mapMediaToImages } from "../hooks/mapMediaToImages";
 
 function BookmarkStudyContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const startIndex = parseInt(searchParams.get('start') || '0');
 
-  const [bookmarks, setBookmarks] = useState<BookmarkedCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(startIndex);
+  const {
+    bookmarks,
+    setBookmarks,
+    loading,
+    currentIndex,
+    setCurrentIndex,
+    loadBookmarks,
+  } = useBookmarkLoader(startIndex);
+
+  const { handleNext, handlePrevious } = useCardNavigation(
+    bookmarks.length,
+    setCurrentIndex
+  );
+
+  useKeyboardNavigation(handleNext, handlePrevious);
+
+  const { handleBookmarkToggle } = useBookmarkToggle(
+    bookmarks,
+    setBookmarks,
+    currentIndex,
+    setCurrentIndex
+  );
+
   const [showQuizModal, setShowQuizModal] = useState(false);
 
   const currentCard = bookmarks[currentIndex];
   const progress = bookmarks.length > 0 ? ((currentIndex + 1) / bookmarks.length) * 100 : 0;
 
-  const loadBookmarks = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/bookmarks');
-      if (!res.ok) throw new Error('Failed to load bookmarks');
-
-      const data = await res.json();
-      const bookmarkedCards = data.bookmarks || [];
-
-      if (bookmarkedCards.length === 0) {
-        toast.info("No bookmarks to study");
-        router.push('/dashboard/bookmarks');
-        return;
-      }
-
-      setBookmarks(bookmarkedCards);
-
-      // Validate start index
-      if (startIndex >= bookmarkedCards.length) {
-        setCurrentIndex(0);
-      }
-    } catch (error) {
-      console.error('Error loading bookmarks:', error);
-      toast.error("Failed to load bookmarks");
-      router.push('/dashboard/bookmarks');
-    } finally {
-      setLoading(false);
-    }
-  }, [router, startIndex]);
-
-  const handleNext = useCallback(() => {
-    if (bookmarks.length === 0) return;
-    // Loop to beginning when reaching the end
-    setCurrentIndex((prev) => (prev + 1) % bookmarks.length);
-  }, [bookmarks.length]);
-
-  const handlePrevious = useCallback(() => {
-    if (bookmarks.length === 0) return;
-    // Loop to end when at beginning
-    setCurrentIndex((prev) => (prev - 1 + bookmarks.length) % bookmarks.length);
-  }, [bookmarks.length]);
-
   useEffect(() => {
     loadBookmarks();
   }, [loadBookmarks]);
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        handlePrevious();
-      } else if (e.key === 'ArrowRight') {
-        handleNext();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNext, handlePrevious]);
-
-  const handleBookmarkToggle = async (flashcardId: string, isBookmarked: boolean) => {
-    try {
-      if (!isBookmarked) {
-        // Remove bookmark
-        const res = await fetch(`/api/bookmarks/${flashcardId}`, {
-          method: 'DELETE',
-        });
-
-        if (!res.ok) throw new Error('Failed to remove bookmark');
-
-        // Remove from local state
-        const updatedBookmarks = bookmarks.filter(b => b.flashcardId !== flashcardId);
-        setBookmarks(updatedBookmarks);
-
-        toast.success("Bookmark removed");
-
-        // If no more bookmarks, redirect back
-        if (updatedBookmarks.length === 0) {
-          toast.info("No more bookmarks to study");
-          router.push('/dashboard/bookmarks');
-          return;
-        }
-
-        // Adjust current index if needed
-        if (currentIndex >= updatedBookmarks.length) {
-          setCurrentIndex(updatedBookmarks.length - 1);
-        }
-      } else {
-        // This shouldn't happen in bookmark study mode, but handle it anyway
-        const res = await fetch('/api/bookmarks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flashcardId }),
-        });
-
-        if (!res.ok) throw new Error('Failed to add bookmark');
-        toast.success("Card bookmarked!");
-      }
-    } catch (error) {
-      console.error('Bookmark error:', error);
-      toast.error("Failed to update bookmark");
-    }
-  };
 
   const handleTest = () => {
     setShowQuizModal(true);
@@ -223,20 +125,8 @@ function BookmarkStudyContent() {
             question={currentCard.question}
             answer={currentCard.answer}
             isBookmarked={true}
-            questionImages={currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order).map(m => ({
-              id: m.id,
-              url: m.fileUrl,
-              altText: m.altText,
-              placement: m.placement,
-              order: m.order
-            }))}
-            answerImages={currentCard.media?.filter(m => m.placement === 'answer').sort((a, b) => a.order - b.order).map(m => ({
-              id: m.id,
-              url: m.fileUrl,
-              altText: m.altText,
-              placement: m.placement,
-              order: m.order
-            }))}
+            questionImages={mapMediaToImages(currentCard.media, 'question')}
+            answerImages={mapMediaToImages(currentCard.media, 'answer')}
             onTest={handleTest}
             onBookmarkToggle={handleBookmarkToggle}
           />
