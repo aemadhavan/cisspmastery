@@ -68,14 +68,6 @@ export function DeckFormDialog({
     ? "Update the deck details below"
     : "Add a new deck to this class";
   const saveButtonText = isEditMode ? "Update" : "Create";
-  const isQuizType = formData.type === 'quiz';
-
-  const updateFormField = <K extends keyof DeckFormData>(
-    field: K,
-    value: DeckFormData[K]
-  ) => {
-    setFormData({ ...formData, [field]: value });
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -93,7 +85,7 @@ export function DeckFormDialog({
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => updateFormField('name', e.target.value)}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Security Architecture and Engineering"
               className="bg-slate-900 border-slate-700 text-white"
             />
@@ -104,7 +96,7 @@ export function DeckFormDialog({
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => updateFormField('description', e.target.value)}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Brief description of this deck..."
               className="bg-slate-900 border-slate-700 text-white min-h-[100px]"
             />
@@ -115,14 +107,14 @@ export function DeckFormDialog({
             <select
               id="type"
               value={formData.type}
-              onChange={(e) => updateFormField('type', e.target.value as 'flashcard' | 'quiz')}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value as 'flashcard' | 'quiz' })}
               className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="flashcard">Flashcard</option>
               <option value="quiz">Quiz</option>
             </select>
             <p className="text-xs text-gray-400">
-              {isQuizType
+              {formData.type === 'quiz'
                 ? 'Quiz deck with multiple-choice questions (requires JSON file upload)'
                 : 'Traditional flashcard deck with questions and answers'}
             </p>
@@ -134,7 +126,7 @@ export function DeckFormDialog({
               id="order"
               type="number"
               value={formData.order}
-              onChange={(e) => updateFormField('order', parseInt(e.target.value) || 0)}
+              onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
               className="bg-slate-900 border-slate-700 text-white"
               min={0}
             />
@@ -143,7 +135,7 @@ export function DeckFormDialog({
             </p>
           </div>
 
-          {isQuizType && (
+          {formData.type === 'quiz' && (
             <QuizFileUpload
               quizData={quizFile.data}
               fileName={quizFile.fileName}
@@ -163,7 +155,7 @@ export function DeckFormDialog({
             <Switch
               id="isPremium"
               checked={formData.isPremium}
-              onCheckedChange={(checked) => updateFormField('isPremium', checked)}
+              onCheckedChange={(checked) => setFormData({ ...formData, isPremium: checked })}
             />
           </div>
 
@@ -177,7 +169,7 @@ export function DeckFormDialog({
             <Switch
               id="isPublished"
               checked={formData.isPublished}
-              onCheckedChange={(checked) => updateFormField('isPublished', checked)}
+              onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
             />
           </div>
         </div>

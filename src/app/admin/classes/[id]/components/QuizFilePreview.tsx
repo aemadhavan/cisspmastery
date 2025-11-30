@@ -9,17 +9,12 @@ interface QuizFilePreviewProps {
 }
 
 export function QuizFilePreview({ quizData, fileName, onRemove }: QuizFilePreviewProps) {
-  const questionCount = quizData.questions.length;
-  const previewQuestions = quizData.questions.slice(0, 2);
-  const hasMoreQuestions = questionCount > 2;
-  const questionLabel = questionCount !== 1 ? 's' : '';
-
   return (
     <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-blue-300">
-            ✓ {questionCount} question{questionLabel} loaded
+            ✓ {quizData.questions.length} questions loaded
           </p>
           <p className="text-xs text-blue-400 mt-1">{fileName}</p>
         </div>
@@ -36,7 +31,7 @@ export function QuizFilePreview({ quizData, fileName, onRemove }: QuizFilePrevie
       <div className="mt-2 pt-2 border-t border-blue-700">
         <p className="text-xs text-blue-300 font-medium mb-1">Preview:</p>
         <div className="space-y-1">
-          {previewQuestions.map((q, idx) => (
+          {quizData.questions.slice(0, 2).map((q, idx) => (
             <div key={idx} className="text-xs text-blue-200">
               <p className="font-medium">Q{idx + 1}: {q.question}</p>
               <p className="text-blue-400 ml-2 mt-0.5">
@@ -44,9 +39,9 @@ export function QuizFilePreview({ quizData, fileName, onRemove }: QuizFilePrevie
               </p>
             </div>
           ))}
-          {hasMoreQuestions && (
+          {quizData.questions.length > 2 && (
             <p className="text-xs text-blue-400 italic">
-              +{questionCount - 2} more question(s)...
+              +{quizData.questions.length - 2} more questions...
             </p>
           )}
         </div>
