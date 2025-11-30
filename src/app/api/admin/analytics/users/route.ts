@@ -86,23 +86,102 @@ export const GET = withTracing(
   { logRequest: true, logResponse: true }
 );
 
+function extractFlashcardIds(classItem: { decks: { flashcards: { id: string }[] }[] }) {
+  return classItem.decks.flatMap((deck) => deck.flashcards.map((card) => card.id));
+}
+
+function createEmptyProgress(classId: string, className: string) {
+  return {
+    domainId: classId,
+    domainName: className,
+    totalCards: 0,
+    studiedCards: 0,
+    masteredCards: 0,
+    learningCards: 0,
+    newCards: 0,
+    progress: 0,
+  };
+}
+
+function calculateMasteryBreakdown(progressRecords: { masteryStatus: string }[]) {
+  return {
+    studied: progressRecords.length,
+    mastered: progressRecords.filter((p) => p.masteryStatus === 'mastered').length,
+    learning: progressRecords.filter((p) => p.masteryStatus === 'learning').length,
+    new: progressRecords.filter((p) => p.masteryStatus === 'new').length,
+  };
+}
+
+async function calculateClassProgress(
+  userId: string,
+  classItem: { id: string; name: string; decks: { flashcards: { id: string }[] }[] }
+) {
+  const flashcardIds = extractFlashcardIds(classItem);
+
+  if (flashcardIds.length === 0) {
+    return createEmptyProgress(classItem.id, classItem.name);
+  }
+
+  const progressRecords = await db
+    .select()
+    .from(userCardProgress)
+    .where(
+      and(
+        eq(userCardProgress.clerkUserId, userId),
+        inArray(userCardProgress.flashcardId, flashcardIds)
+      )
+    );
+
+  const breakdown = calculateMasteryBreakdown(progressRecords);
+
+  return {
+    domainId: classItem.id,
+    domainName: classItem.name,
+    totalCards: flashcardIds.length,
+    studiedCards: breakdown.studied,
+    masteredCards: breakdown.mastered,
+    learningCards: breakdown.learning,
+    newCards: breakdown.new,
+    progress: Math.round((breakdown.studied / flashcardIds.length) * 100),
+  };
+}
+
+async function getCardDetailsForClass(
+  userId: string,
+  flashcardIds: string[]
+) {
+  if (flashcardIds.length === 0) return null;
+
+  return db
+    .select({
+      flashcardId: userCardProgress.flashcardId,
+      confidenceLevel: userCardProgress.confidenceLevel,
+      timesSeen: userCardProgress.timesSeen,
+      masteryStatus: userCardProgress.masteryStatus,
+      lastSeen: userCardProgress.lastSeen,
+    })
+    .from(userCardProgress)
+    .where(
+      and(
+        eq(userCardProgress.clerkUserId, userId),
+        inArray(userCardProgress.flashcardId, flashcardIds)
+      )
+    );
+}
+
 /**
  * Get detailed analytics for a specific user
  */
 async function getUserAnalytics(userId: string, domainId: string | null) {
-  // Get user details
   const user = await db.query.users.findFirst({
     where: eq(users.clerkUserId, userId),
-    with: {
-      stats: true,
-    },
+    with: { stats: true },
   });
 
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  // Get all classes
   const allClasses = await db.query.classes.findMany({
     with: {
       decks: {
@@ -115,80 +194,16 @@ async function getUserAnalytics(userId: string, domainId: string | null) {
     },
   });
 
-  // Calculate progress per class
   const classProgress = await Promise.all(
-    allClasses.map(async (classItem) => {
-      const flashcardIds = classItem.decks.flatMap((deck) =>
-        deck.flashcards.map((card) => card.id)
-      );
-
-      if (flashcardIds.length === 0) {
-        return {
-          domainId: classItem.id,
-          domainName: classItem.name,
-          totalCards: 0,
-          studiedCards: 0,
-          masteredCards: 0,
-          learningCards: 0,
-          newCards: 0,
-          progress: 0,
-        };
-      }
-
-      const progressRecords = await db
-        .select()
-        .from(userCardProgress)
-        .where(
-          and(
-            eq(userCardProgress.clerkUserId, userId),
-            inArray(userCardProgress.flashcardId, flashcardIds)
-          )
-        );
-
-      const studiedCards = progressRecords.length;
-      const masteredCards = progressRecords.filter((p) => p.masteryStatus === 'mastered').length;
-      const learningCards = progressRecords.filter((p) => p.masteryStatus === 'learning').length;
-      const newCardsCount = progressRecords.filter((p) => p.masteryStatus === 'new').length;
-
-      return {
-        domainId: classItem.id,
-        domainName: classItem.name,
-        totalCards: flashcardIds.length,
-        studiedCards,
-        masteredCards,
-        learningCards,
-        newCards: newCardsCount,
-        progress: flashcardIds.length > 0 ? Math.round((studiedCards / flashcardIds.length) * 100) : 0,
-      };
-    })
+    allClasses.map((classItem) => calculateClassProgress(userId, classItem))
   );
 
-  // If specific class requested, get card-level details
   let cardDetails = null;
   if (domainId) {
     const classItem = allClasses.find((d) => d.id === domainId);
     if (classItem) {
-      const flashcardIds = classItem.decks.flatMap((deck) =>
-        deck.flashcards.map((card) => card.id)
-      );
-
-      if (flashcardIds.length > 0) {
-        cardDetails = await db
-          .select({
-            flashcardId: userCardProgress.flashcardId,
-            confidenceLevel: userCardProgress.confidenceLevel,
-            timesSeen: userCardProgress.timesSeen,
-            masteryStatus: userCardProgress.masteryStatus,
-            lastSeen: userCardProgress.lastSeen,
-          })
-          .from(userCardProgress)
-          .where(
-            and(
-              eq(userCardProgress.clerkUserId, userId),
-              inArray(userCardProgress.flashcardId, flashcardIds)
-            )
-          );
-      }
+      const flashcardIds = extractFlashcardIds(classItem);
+      cardDetails = await getCardDetailsForClass(userId, flashcardIds);
     }
   }
 

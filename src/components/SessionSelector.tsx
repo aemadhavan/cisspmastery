@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Play, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { SummaryCard } from "./SessionSelector/SummaryCard";
+import { ClassCard } from "./SessionSelector/ClassCard";
 
 interface Deck {
   id: string;
@@ -30,72 +28,27 @@ interface SessionSelectorProps {
   userId: string;
 }
 
-const getColorClass = (color: string | null) => {
-  const colorMap: { [key: string]: string } = {
-    purple: "bg-purple-500",
-    blue: "bg-blue-500",
-    green: "bg-green-500",
-    red: "bg-red-500",
-    orange: "bg-orange-500",
-    yellow: "bg-yellow-500",
-    pink: "bg-pink-500",
-    indigo: "bg-indigo-500",
-    teal: "bg-teal-500",
-  };
-  return colorMap[color || "purple"] || "bg-purple-500";
-};
-
-/**
- * Get all decks for a class
- */
-const getClassDecks = (classes: ClassWithProgress[], classId: string): Deck[] => {
+function getClassDecks(classes: ClassWithProgress[], classId: string): Deck[] {
   return classes.find(c => c.id === classId)?.decks || [];
-};
+}
 
-/**
- * Remove all decks from a class
- */
-const removeClassDecks = (
-  deckSet: Set<string>,
-  decks: Deck[]
-): Set<string> => {
+function toggleDecksInSet(deckSet: Set<string>, decks: Deck[], add: boolean): Set<string> {
   const newSet = new Set(deckSet);
-  decks.forEach(deck => newSet.delete(deck.id));
+  decks.forEach(deck => add ? newSet.add(deck.id) : newSet.delete(deck.id));
   return newSet;
-};
+}
 
-/**
- * Add all decks from a class
- */
-const addClassDecks = (
-  deckSet: Set<string>,
-  decks: Deck[]
-): Set<string> => {
-  const newSet = new Set(deckSet);
-  decks.forEach(deck => newSet.add(deck.id));
-  return newSet;
-};
-
-/**
- * Check if any decks from class are selected
- */
-const hasAnyDeckSelected = (
-  deckSet: Set<string>,
-  decks: Deck[]
-): boolean => {
+function hasAnyDeckSelected(deckSet: Set<string>, decks: Deck[]): boolean {
   return decks.some(deck => deckSet.has(deck.id));
-};
+}
 
-/**
- * Check if all decks from class are selected
- */
-const areAllDecksSelected = (
+function areAllDecksSelected(
   deckSet: Set<string>,
   decks: Deck[],
   includingDeckId?: string
-): boolean => {
+): boolean {
   return decks.every(deck => deckSet.has(deck.id) || deck.id === includingDeckId);
-};
+}
 
 export default function SessionSelector({ classes, userId }: SessionSelectorProps) {
   const router = useRouter();
@@ -108,15 +61,15 @@ export default function SessionSelector({ classes, userId }: SessionSelectorProp
     setSelectedClasses(prev => {
       const newSet = new Set(prev);
       const classDecks = getClassDecks(classes, classId);
+      const isAdding = !newSet.has(classId);
 
-      if (newSet.has(classId)) {
-        newSet.delete(classId);
-        setSelectedDecks(prevDecks => removeClassDecks(prevDecks, classDecks));
-      } else {
+      if (isAdding) {
         newSet.add(classId);
-        setSelectedDecks(prevDecks => addClassDecks(prevDecks, classDecks));
+      } else {
+        newSet.delete(classId);
       }
 
+      setSelectedDecks(prevDecks => toggleDecksInSet(prevDecks, classDecks, isAdding));
       return newSet;
     });
   };
@@ -203,129 +156,34 @@ export default function SessionSelector({ classes, userId }: SessionSelectorProp
 
   return (
     <div className="space-y-6">
-      {/* Summary Card */}
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Session Summary</h3>
-              <p className="text-sm text-gray-400">
-                {selectedDecks.size} deck{selectedDecks.size !== 1 ? 's' : ''} selected • {totalSelectedCards} card{totalSelectedCards !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <Button
-              onClick={startSession}
-              disabled={selectedDecks.size === 0 || isStarting}
-              size="lg"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-            >
-              <Play className="w-5 h-5 mr-2 fill-white" />
-              {isStarting ? 'Starting...' : 'Start Session'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <SummaryCard
+        selectedDecksCount={selectedDecks.size}
+        totalSelectedCards={totalSelectedCards}
+        isStarting={isStarting}
+        onStartSession={startSession}
+      />
 
-      {/* Class Selection */}
       <div className="space-y-4">
-        {classes.map((cls) => {
-          const isClassSelected = selectedClasses.has(cls.id);
-          const isExpanded = expandedClasses.has(cls.id);
-          const selectedDeckCount = cls.decks.filter(deck => selectedDecks.has(deck.id)).length;
-
-          return (
-            <Card
-              key={cls.id}
-              className={`bg-slate-800/50 border-2 transition-all ${
-                isClassSelected
-                  ? 'border-blue-500 shadow-lg shadow-blue-500/20'
-                  : 'border-slate-700 hover:border-slate-600'
-              }`}
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    {/* Checkbox */}
-                    <button
-                      onClick={() => toggleClass(cls.id)}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
-                        isClassSelected
-                          ? 'bg-blue-500'
-                          : 'bg-slate-700 border border-slate-600 hover:bg-slate-600'
-                      }`}
-                    >
-                      {isClassSelected && <Check className="w-6 h-6 text-white" />}
-                    </button>
-
-                    {/* Class Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        {cls.icon && <span className="text-2xl">{cls.icon}</span>}
-                        <div className={`w-3 h-3 rounded-full ${getColorClass(cls.color)}`}></div>
-                      </div>
-                      <CardTitle className="text-lg text-white mb-1">{cls.name}</CardTitle>
-                      <p className="text-sm text-gray-400">
-                        {cls.decks.length} deck{cls.decks.length !== 1 ? 's' : ''} • {cls.totalCards} card{cls.totalCards !== 1 ? 's' : ''}
-                        {selectedDeckCount > 0 && ` • ${selectedDeckCount} selected`}
-                      </p>
-                      <div className="mt-2">
-                        <Progress value={cls.progress} className="h-2" aria-label={`${cls.name} progress`} />
-                      </div>
-                    </div>
-
-                    {/* Expand Button */}
-                    {cls.decks.length > 0 && (
-                      <button
-                        onClick={() => toggleExpanded(cls.id)}
-                        className="p-2 rounded-full hover:bg-slate-700 text-gray-400 hover:text-white transition-colors"
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="w-5 h-5" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-
-              {/* Deck List (Expanded) */}
-              {isExpanded && (
-                <CardContent className="pt-0">
-                  <div className="space-y-2 pl-14">
-                    {cls.decks.map((deck) => {
-                      const isDeckSelected = selectedDecks.has(deck.id);
-                      return (
-                        <button
-                          key={deck.id}
-                          onClick={() => toggleDeck(cls.id, deck.id)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                            isDeckSelected
-                              ? 'bg-blue-500/20 border-2 border-blue-500'
-                              : 'bg-slate-700/50 border-2 border-transparent hover:bg-slate-700'
-                          }`}
-                        >
-                          <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${
-                            isDeckSelected
-                              ? 'bg-blue-500'
-                              : 'bg-slate-600 border border-slate-500'
-                          }`}>
-                            {isDeckSelected && <Check className="w-4 h-4 text-white" />}
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className="text-sm font-medium text-white">{deck.name}</p>
-                            <p className="text-xs text-gray-400">{deck.cardCount} cards</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          );
-        })}
+        {classes.map((cls) => (
+          <ClassCard
+            key={cls.id}
+            classId={cls.id}
+            name={cls.name}
+            description={cls.description}
+            icon={cls.icon}
+            color={cls.color}
+            totalCards={cls.totalCards}
+            progress={cls.progress}
+            decks={cls.decks}
+            isSelected={selectedClasses.has(cls.id)}
+            isExpanded={expandedClasses.has(cls.id)}
+            selectedDeckCount={cls.decks.filter(deck => selectedDecks.has(deck.id)).length}
+            selectedDecks={selectedDecks}
+            onToggleClass={() => toggleClass(cls.id)}
+            onToggleExpand={() => toggleExpanded(cls.id)}
+            onToggleDeck={(deckId) => toggleDeck(cls.id, deckId)}
+          />
+        ))}
       </div>
     </div>
   );
