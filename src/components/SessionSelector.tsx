@@ -167,21 +167,27 @@ export default function SessionSelector({ classes, userId }: SessionSelectorProp
         {classes.map((cls) => (
           <ClassCard
             key={cls.id}
-            classId={cls.id}
-            name={cls.name}
-            description={cls.description}
-            icon={cls.icon}
-            color={cls.color}
-            totalCards={cls.totalCards}
-            progress={cls.progress}
-            decks={cls.decks}
-            isSelected={selectedClasses.has(cls.id)}
-            isExpanded={expandedClasses.has(cls.id)}
-            selectedDeckCount={cls.decks.filter(deck => selectedDecks.has(deck.id)).length}
-            selectedDecks={selectedDecks}
-            onToggleClass={() => toggleClass(cls.id)}
-            onToggleExpand={() => toggleExpanded(cls.id)}
-            onToggleDeck={(deckId) => toggleDeck(cls.id, deckId)}
+            classData={{
+              id: cls.id,
+              name: cls.name,
+              description: cls.description,
+              icon: cls.icon,
+              color: cls.color,
+              totalCards: cls.totalCards,
+              progress: cls.progress,
+              decks: cls.decks,
+            }}
+            selectionState={{
+              isSelected: selectedClasses.has(cls.id),
+              isExpanded: expandedClasses.has(cls.id),
+              selectedDeckCount: cls.decks.filter(deck => selectedDecks.has(deck.id)).length,
+              selectedDecks: selectedDecks,
+            }}
+            handlers={{
+              onToggleClass: () => toggleClass(cls.id),
+              onToggleExpand: () => toggleExpanded(cls.id),
+              onToggleDeck: (deckId) => toggleDeck(cls.id, deckId),
+            }}
           />
         ))}
       </div>

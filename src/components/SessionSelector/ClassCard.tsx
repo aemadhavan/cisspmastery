@@ -3,14 +3,14 @@ import { Progress } from "@/components/ui/progress";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { DeckItem } from "./DeckItem";
 
-interface Deck {
+export interface Deck {
   id: string;
   name: string;
   cardCount: number;
 }
 
-interface ClassCardProps {
-  classId: string;
+export interface ClassData {
+  id: string;
   name: string;
   description: string | null;
   icon: string | null;
@@ -18,13 +18,25 @@ interface ClassCardProps {
   totalCards: number;
   progress: number;
   decks: Deck[];
+}
+
+export interface SelectionState {
   isSelected: boolean;
   isExpanded: boolean;
   selectedDeckCount: number;
   selectedDecks: Set<string>;
+}
+
+export interface ClassCardHandlers {
   onToggleClass: () => void;
   onToggleExpand: () => void;
   onToggleDeck: (deckId: string) => void;
+}
+
+export interface ClassCardProps {
+  classData: ClassData;
+  selectionState: SelectionState;
+  handlers: ClassCardHandlers;
 }
 
 function getColorClass(color: string | null) {
@@ -43,21 +55,13 @@ function getColorClass(color: string | null) {
 }
 
 export function ClassCard({
-  name,
-  description,
-  icon,
-  color,
-  totalCards,
-  progress,
-  decks,
-  isSelected,
-  isExpanded,
-  selectedDeckCount,
-  selectedDecks,
-  onToggleClass,
-  onToggleExpand,
-  onToggleDeck,
+  classData,
+  selectionState,
+  handlers,
 }: ClassCardProps) {
+  const { name, icon, color, totalCards, progress, decks } = classData;
+  const { isSelected, isExpanded, selectedDeckCount, selectedDecks } = selectionState;
+  const { onToggleClass, onToggleExpand, onToggleDeck } = handlers;
   return (
     <Card
       className={`bg-slate-800/50 border-2 transition-all ${
