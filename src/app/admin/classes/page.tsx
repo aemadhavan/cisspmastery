@@ -3,9 +3,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -14,17 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Edit2, Trash2, BookOpen, GripVertical, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { ClassFormDialog } from "./components/ClassFormDialog";
 
 interface Class {
   id: string;
@@ -48,33 +38,6 @@ interface ClassFormData {
   color: string;
   isPublished: boolean;
 }
-
-const ICON_OPTIONS = [
-  { value: "🔐", label: "Lock" },
-  { value: "🛡️", label: "Shield" },
-  { value: "🔒", label: "Secure Lock" },
-  { value: "🌐", label: "Globe" },
-  { value: "💻", label: "Computer" },
-  { value: "🔑", label: "Key" },
-  { value: "🎯", label: "Target" },
-  { value: "📊", label: "Chart" },
-  { value: "🏢", label: "Building" },
-  { value: "⚙️", label: "Gear" },
-  { value: "📚", label: "Books" },
-  { value: "🎓", label: "Graduation" },
-];
-
-const COLOR_OPTIONS = [
-  { value: "purple", label: "Purple" },
-  { value: "blue", label: "Blue" },
-  { value: "green", label: "Green" },
-  { value: "red", label: "Red" },
-  { value: "orange", label: "Orange" },
-  { value: "yellow", label: "Yellow" },
-  { value: "pink", label: "Pink" },
-  { value: "indigo", label: "Indigo" },
-  { value: "teal", label: "Teal" },
-];
 
 const getColorClass = (color: string | null) => {
   const colorMap: { [key: string]: string } = {
@@ -398,146 +361,15 @@ export default function AdminClassesPage() {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingClass ? "Edit Class" : "Create New Class"}
-            </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              {editingClass
-                ? "Update the class details below"
-                : "Add a new class to your CISSP study platform"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Class Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Security and Risk Management"
-                className="bg-slate-900 border-slate-700 text-white"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of this class..."
-                className="bg-slate-900 border-slate-700 text-white min-h-[100px]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="icon">Icon</Label>
-                <Select
-                  value={formData.icon}
-                  onValueChange={(value) => setFormData({ ...formData, icon: value })}
-                >
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {ICON_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-white hover:bg-slate-700"
-                      >
-                        {option.value} {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="color">Color Theme</Label>
-                <Select
-                  value={formData.color}
-                  onValueChange={(value) => setFormData({ ...formData, color: value })}
-                >
-                  <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {COLOR_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-white hover:bg-slate-700"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="order">Display Order</Label>
-              <Input
-                id="order"
-                type="number"
-                value={formData.order}
-                onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                className="bg-slate-900 border-slate-700 text-white"
-                min={0}
-              />
-              <p className="text-xs text-gray-400">
-                Lower numbers appear first in the list
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between py-2 px-3 bg-slate-900 rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="isPublished">Published</Label>
-                <p className="text-xs text-gray-400">
-                  Make this class visible to users
-                </p>
-              </div>
-              <Switch
-                id="isPublished"
-                checked={formData.isPublished}
-                onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDialogOpen(false)}
-              disabled={isSaving}
-              className="border-slate-700 text-gray-300 hover:bg-slate-700"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveClass}
-              disabled={isSaving}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>{editingClass ? "Update" : "Create"} Class</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClassFormDialog
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        editingClass={editingClass}
+        formData={formData}
+        setFormData={setFormData}
+        onSave={handleSaveClass}
+        isSaving={isSaving}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
