@@ -10,5 +10,4 @@ drop-orphaned-enums.sql
 # Migration scripts that execute DDL and query system tables
 scripts/fix-migrations.js
 scripts/deep-cleanup.js
-scripts/investigate-enums.js
 scripts/apply-migration.js

@@ -164,9 +164,9 @@ npm run db:push
 ### **Created Files:**
 - `src/lib/db/schema-new.ts` - New schema (reference)
 - `src/lib/db/schema.old.ts` - Backup of old schema
-- `migration.sql` - SQL migration script
-- `scripts/migrate-to-classes.ts` - Migration helper (deprecated)
-- `scripts/migrate-xata.ts` - Xata migration script (used)
+- ~~`migration.sql`~~ - SQL migration script (deleted - migration complete)
+- ~~`scripts/migrate-to-classes.ts`~~ - Migration helper (deleted - migration complete)
+- ~~`scripts/migrate-xata.ts`~~ - Xata migration script (deleted - migration complete)
 - `src/app/api/admin/classes/route.ts` - Class CRUD API
 - `src/app/api/admin/classes/[id]/route.ts` - Class detail API
 - `MIGRATION_GUIDE.md` - Migration planning document

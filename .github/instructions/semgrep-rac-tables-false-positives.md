@@ -164,7 +164,6 @@ xata-fix-enums.sql
 drop-orphaned-enums.sql
 scripts/fix-migrations.js
 scripts/deep-cleanup.js
-scripts/investigate-enums.js
 scripts/apply-migration.js
 ```
 

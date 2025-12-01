@@ -47,7 +47,6 @@ exclude_paths:
   - 'apply-migration.js'
   - 'scripts/fix-migrations.js'
   - 'scripts/deep-cleanup.js'
-  - 'scripts/investigate-enums.js'
 ```
 
 ### Option 3: Inline Suppression Comments
@@ -85,4 +84,3 @@ This code is **secure** because:
 - `apply-migration.js` (lines 47, 63)
 - `scripts/fix-migrations.js`
 - `scripts/deep-cleanup.js`
-- `scripts/investigate-enums.js`
