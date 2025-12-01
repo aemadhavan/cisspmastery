@@ -84,6 +84,64 @@ function shouldLogToConsole(level: LogLevel): boolean {
 }
 
 /**
+ * Log to console based on level
+ */
+function logToConsole(
+  level: LogLevel,
+  formatted: { level: string; timestamp: string; message: string },
+  context?: LogContext,
+  error?: Error
+): void {
+  switch (level) {
+    case 'debug':
+      console.debug('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, context);
+      break;
+    case 'info':
+      console.info('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, context);
+      break;
+    case 'warn':
+      console.warn('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, context);
+      break;
+    case 'error':
+      console.error('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, error || '', context);
+      break;
+  }
+}
+
+/**
+ * Log to Sentry (production only)
+ */
+function logToSentry(
+  level: LogLevel,
+  message: string,
+  context?: LogContext,
+  error?: Error
+): void {
+  if (!Sentry || process.env.NODE_ENV !== 'production') {
+    return;
+  }
+
+  if (level === 'error' && error) {
+    Sentry.captureException(error, {
+      level: 'error',
+      contexts: {
+        log: context,
+      },
+      tags: {
+        logLevel: level,
+      },
+    });
+  } else if (level === 'warn') {
+    Sentry.captureMessage(message, {
+      level: 'warning',
+      contexts: {
+        log: context,
+      },
+    });
+  }
+}
+
+/**
  * Internal logging function
  */
 function logMessage(
@@ -103,44 +161,11 @@ function logMessage(
   // Console logging
   if (shouldLogToConsole(level)) {
     const formatted = formatLogMessage(logData);
-
-    switch (level) {
-      case 'debug':
-        console.debug('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, context);
-        break;
-      case 'info':
-        console.info('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, context);
-        break;
-      case 'warn':
-        console.warn('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, context);
-        break;
-      case 'error':
-        console.error('[%s] [%s]', formatted.level, formatted.timestamp, formatted.message, error || '', context);
-        break;
-    }
+    logToConsole(level, formatted, context, error);
   }
 
-  // Send to Sentry (production only, warn and error levels)
-  if (Sentry && process.env.NODE_ENV === 'production') {
-    if (level === 'error' && error) {
-      Sentry.captureException(error, {
-        level: 'error',
-        contexts: {
-          log: context,
-        },
-        tags: {
-          logLevel: level,
-        },
-      });
-    } else if (level === 'warn') {
-      Sentry.captureMessage(message, {
-        level: 'warning',
-        contexts: {
-          log: context,
-        },
-      });
-    }
-  }
+  // Send to Sentry
+  logToSentry(level, message, context, error);
 }
 
 /**

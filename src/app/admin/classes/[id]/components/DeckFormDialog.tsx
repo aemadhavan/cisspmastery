@@ -32,27 +32,37 @@ interface QuizFileProps {
   onRemove: () => void;
 }
 
-interface DeckFormDialogProps {
+interface DialogState {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  deck: Deck | null;
-  formData: DeckFormData;
-  setFormData: (data: DeckFormData) => void;
-  quizFile: QuizFileProps;
+}
+
+interface SaveAction {
   onSave: () => void;
   isSaving: boolean;
 }
 
+interface FormState {
+  data: DeckFormData;
+  onChange: (data: DeckFormData) => void;
+}
+
+interface DeckFormDialogProps {
+  dialog: DialogState;
+  deck: Deck | null;
+  form: FormState;
+  quizFile: QuizFileProps;
+  saveAction: SaveAction;
+}
+
 export function DeckFormDialog({
-  isOpen,
-  onOpenChange,
+  dialog,
   deck,
-  formData,
-  setFormData,
+  form,
   quizFile,
-  onSave,
-  isSaving,
+  saveAction,
 }: DeckFormDialogProps) {
+  const { data: formData, onChange: setFormData } = form;
   const isEditMode = Boolean(deck);
   const dialogTitle = isEditMode ? "Edit Deck" : "Create New Deck";
   const dialogDescription = isEditMode
@@ -62,15 +72,15 @@ export function DeckFormDialog({
 
   return (
     <FormDialog
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
+      isOpen={dialog.isOpen}
+      onOpenChange={dialog.onOpenChange}
       header={{
         title: dialogTitle,
         description: dialogDescription,
       }}
       saveAction={{
-        onSave,
-        isSaving,
+        onSave: saveAction.onSave,
+        isSaving: saveAction.isSaving,
         buttonText: `${saveButtonText} Deck`,
       }}
       maxHeight="60vh"

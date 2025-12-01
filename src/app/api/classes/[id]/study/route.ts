@@ -21,21 +21,44 @@ type ProgressRecord = {
 };
 
 /**
+ * Check if card has not been studied yet
+ */
+function isCardUnstudied(progress: ProgressRecord | undefined): boolean {
+  return !progress;
+}
+
+/**
+ * Check if card has low confidence level
+ */
+function hasLowConfidence(progress: ProgressRecord): boolean {
+  return progress.confidenceLevel !== null && progress.confidenceLevel < 4;
+}
+
+/**
+ * Check if card is due for review
+ */
+function isDueForReview(progress: ProgressRecord, now: Date): boolean {
+  return progress.nextReviewDate !== null && new Date(progress.nextReviewDate) <= now;
+}
+
+/**
  * Check if a card needs review in progressive mode
  */
-// codacy-disable-next-line Lizard_nloc-medium,Lizard_ccn-medium,Lizard_parameter-count-medium
 function shouldIncludeInProgressiveMode(
   progress: ProgressRecord | undefined,
   now: Date
 ): boolean {
-  // Include cards that haven't been studied yet
-  if (!progress) return true;
+  if (isCardUnstudied(progress)) {
+    return true;
+  }
 
-  // Include cards with low confidence (< 4)
-  if (progress.confidenceLevel !== null && progress.confidenceLevel < 4) return true;
+  if (hasLowConfidence(progress)) {
+    return true;
+  }
 
-  // Include cards that are due for review
-  if (progress.nextReviewDate && new Date(progress.nextReviewDate) <= now) return true;
+  if (isDueForReview(progress, now)) {
+    return true;
+  }
 
   return false;
 }
@@ -156,6 +179,79 @@ function createProgressMap(progressRecords: ProgressRecord[]): Map<string, Progr
 }
 
 /**
+ * Parse request parameters
+ */
+interface StudyParams {
+  mode: string;
+  selectedDeckIds: string[] | null;
+}
+
+function parseStudyParams(searchParams: URLSearchParams): StudyParams {
+  const mode = searchParams.get('mode') || 'progressive';
+  const decksParam = searchParams.get('decks');
+  const selectedDeckIds = decksParam ? decksParam.split(',') : null;
+
+  return { mode, selectedDeckIds };
+}
+
+/**
+ * Fetch class with decks and flashcards
+ */
+async function fetchClassWithDecks(classId: string, selectedDeckIds: string[] | null) {
+  const classData = await db.query.classes.findFirst({
+    where: eq(classes.id, classId),
+  });
+
+  if (!classData) {
+    return { classData: null, classDecks: [] };
+  }
+
+  const deckConditions = buildDeckQueryConditions(classId, selectedDeckIds);
+  const classDecks = await db.query.decks.findMany({
+    where: and(...deckConditions),
+    with: {
+      flashcards: {
+        where: eq(flashcards.isPublished, true),
+        with: {
+          media: true,
+        },
+      },
+    },
+  });
+
+  return { classData, classDecks };
+}
+
+/**
+ * Fetch user progress for flashcards
+ */
+async function fetchUserProgress(userId: string, cardIds: string[]) {
+  const progressRecords = await db
+    .select()
+    .from(userCardProgress)
+    .where(
+      and(
+        eq(userCardProgress.clerkUserId, userId),
+        inArray(userCardProgress.flashcardId, cardIds)
+      )
+    );
+
+  return createProgressMap(progressRecords);
+}
+
+/**
+ * Create empty response for study cards
+ */
+function createEmptyResponse(mode: string, classData: { name: string; id: string }) {
+  return NextResponse.json({
+    flashcards: [],
+    mode,
+    className: classData.name,
+    classId: classData.id,
+  });
+}
+
+/**
  * GET /api/classes/[id]/study?mode=progressive|random|all&decks=deck1,deck2
  * Get flashcards for studying a class based on the selected mode
  * Optional: Filter by specific deck IDs (comma-separated)
@@ -172,69 +268,29 @@ async function getClassStudyCards(
     }
 
     const { id: classId } = await params;
-    const searchParams = request.nextUrl.searchParams;
-    const mode = searchParams.get('mode') || 'progressive';
-    const decksParam = searchParams.get('decks'); // Comma-separated deck IDs
-    const selectedDeckIds = decksParam ? decksParam.split(',') : null;
+    const { mode, selectedDeckIds } = parseStudyParams(request.nextUrl.searchParams);
 
-    // Verify class exists
-    const classData = await db.query.classes.findFirst({
-      where: eq(classes.id, classId),
-    });
+    // Fetch class and decks
+    const { classData, classDecks } = await fetchClassWithDecks(classId, selectedDeckIds);
 
     if (!classData) {
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
     }
 
-    // Build deck query conditions and fetch decks
-    const deckConditions = buildDeckQueryConditions(classId, selectedDeckIds);
-    const classDecks = await db.query.decks.findMany({
-      where: and(...deckConditions),
-      with: {
-        flashcards: {
-          where: eq(flashcards.isPublished, true),
-          with: {
-            media: true,
-          },
-        },
-      },
-    });
-
     if (!classDecks || classDecks.length === 0) {
-      return NextResponse.json({
-        flashcards: [],
-        mode,
-        className: classData.name,
-        classId: classData.id,
-      });
+      return createEmptyResponse(mode, classData);
     }
 
     // Flatten all flashcards from all decks
     const allFlashcards = flattenDeckFlashcards(classDecks, classData.name);
 
     if (allFlashcards.length === 0) {
-      return NextResponse.json({
-        flashcards: [],
-        mode,
-        className: classData.name,
-        classId: classData.id,
-      });
+      return createEmptyResponse(mode, classData);
     }
 
     // Get user's progress for all cards
     const cardIds = allFlashcards.map(card => card.id);
-    const progressRecords = await db
-      .select()
-      .from(userCardProgress)
-      .where(
-        and(
-          eq(userCardProgress.clerkUserId, userId),
-          inArray(userCardProgress.flashcardId, cardIds)
-        )
-      );
-
-    // Create a map of card ID to progress
-    const progressMap = createProgressMap(progressRecords);
+    const progressMap = await fetchUserProgress(userId, cardIds);
 
     // Apply study mode logic
     const studyCards = applyStudyMode(mode, allFlashcards, progressMap);

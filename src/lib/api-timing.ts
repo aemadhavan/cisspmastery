@@ -175,6 +175,27 @@ export function addTimingHeaders(response: Response, metrics: TimingMetrics): Re
 }
 
 /**
+ * Log timing metrics
+ */
+function logTimingMetrics(metrics: TimingMetrics, error?: unknown): void {
+  const logData = {
+    requestId: metrics.requestId,
+    method: metrics.method,
+    endpoint: metrics.endpoint,
+    duration: metrics.duration,
+    statusCode: metrics.statusCode,
+    dbQueryTime: metrics.dbQueryTime,
+    cacheTime: metrics.cacheTime,
+  };
+
+  if (error) {
+    console.error('[API Timing]', logData, error);
+  } else {
+    console.log('[API Timing]', logData);
+  }
+}
+
+/**
  * Helper to wrap API route handlers with timing
  */
 export function withTiming<T extends (...args: never[]) => Promise<Response>>(
@@ -192,29 +213,13 @@ export function withTiming<T extends (...args: never[]) => Promise<Response>>(
       const metrics = timer.end(response.status);
 
       // Log metrics
-      console.log('[API Timing]', {
-        requestId: metrics.requestId,
-        method: metrics.method,
-        endpoint: metrics.endpoint,
-        duration: metrics.duration,
-        statusCode: metrics.statusCode,
-        dbQueryTime: metrics.dbQueryTime,
-        cacheTime: metrics.cacheTime,
-      });
+      logTimingMetrics(metrics);
 
       // Add timing headers to response
       return addTimingHeaders(response, metrics);
     } catch (error) {
       const metrics = timer.end(500);
-      console.error('[API Timing]', {
-        requestId: metrics.requestId,
-        method: metrics.method,
-        endpoint: metrics.endpoint,
-        duration: metrics.duration,
-        statusCode: metrics.statusCode,
-        dbQueryTime: metrics.dbQueryTime,
-        cacheTime: metrics.cacheTime,
-      }, error);
+      logTimingMetrics(metrics, error);
       throw error;
     }
   }) as T;

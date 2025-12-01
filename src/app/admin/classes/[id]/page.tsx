@@ -379,19 +379,25 @@ export default function AdminClassDetailPage({ params }: { params: Promise<{ id:
 
       {/* Create/Edit Dialog */}
       <DeckFormDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        dialog={{
+          isOpen: isDialogOpen,
+          onOpenChange: setIsDialogOpen,
+        }}
         deck={editingDeck}
-        formData={formData}
-        setFormData={setFormData}
+        form={{
+          data: formData,
+          onChange: setFormData,
+        }}
         quizFile={{
           data: deckQuizData,
           fileName: deckQuizFileName,
           onFileSelect: handleDeckQuizFileSelect,
           onRemove: handleRemoveDeckQuiz,
         }}
-        onSave={handleSaveDeck}
-        isSaving={isSaving}
+        saveAction={{
+          onSave: handleSaveDeck,
+          isSaving: isSaving,
+        }}
       />
 
       {/* Delete Confirmation Dialog */}
