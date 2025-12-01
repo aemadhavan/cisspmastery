@@ -95,12 +95,33 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
- * Validate URL format
+ * Validate URL format with optional domain whitelisting
+ * @param url - The URL to validate
+ * @param allowedDomains - Optional array of allowed domains (e.g., ['stripe.com', 'example.com'])
+ *                        If provided, the URL hostname must end with one of these domains
  */
-export function isValidUrl(url: string): boolean {
+export function isValidUrl(url: string, allowedDomains?: string[]): boolean {
   try {
     const parsed = new URL(url);
-    return ['http:', 'https:'].includes(parsed.protocol);
+
+    // Check protocol
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return false;
+    }
+
+    // Check domain whitelist if provided
+    if (allowedDomains && allowedDomains.length > 0) {
+      const isAllowedDomain = allowedDomains.some(domain => {
+        // Exact match or subdomain match
+        return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+      });
+
+      if (!isAllowedDomain) {
+        return false;
+      }
+    }
+
+    return true;
   } catch {
     return false;
   }

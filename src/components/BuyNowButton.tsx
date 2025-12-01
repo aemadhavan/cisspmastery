@@ -44,7 +44,8 @@ export default function BuyNowButton({
       // Redirect to Stripe Checkout using the URL
       if (data.url) {
         // Validate URL to prevent open redirect vulnerability
-        if (!isValidUrl(data.url)) {
+        // Only allow Stripe domains for checkout URLs
+        if (!isValidUrl(data.url, ['stripe.com'])) {
           throw new Error("Invalid checkout URL returned");
         }
         window.location.href = data.url;
