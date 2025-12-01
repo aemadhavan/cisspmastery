@@ -21,13 +21,6 @@ type ProgressRecord = {
 };
 
 /**
- * Check if card has not been studied yet
- */
-function isCardUnstudied(progress: ProgressRecord | undefined): boolean {
-  return !progress;
-}
-
-/**
  * Check if card has low confidence level
  */
 function hasLowConfidence(progress: ProgressRecord): boolean {
@@ -48,19 +41,13 @@ function shouldIncludeInProgressiveMode(
   progress: ProgressRecord | undefined,
   now: Date
 ): boolean {
-  if (isCardUnstudied(progress)) {
+  // Unstudied cards (no progress record)
+  if (!progress) {
     return true;
   }
 
-  if (hasLowConfidence(progress)) {
-    return true;
-  }
-
-  if (isDueForReview(progress, now)) {
-    return true;
-  }
-
-  return false;
+  // Cards with low confidence or due for review
+  return hasLowConfidence(progress) || isDueForReview(progress, now);
 }
 
 /**
