@@ -5,16 +5,19 @@ import dynamic from "next/dynamic";
 
 const Header = dynamic(() => import("@/components/Header"), {
   loading: () => (
-    <header className="border-b border-gray-200 bg-white sticky top-0 z-50 shadow-sm" style={{height: '64px'}} />
+    <header className="border-b border-gray-200 bg-white sticky top-0 z-50 shadow-sm" style={{ height: '64px' }} />
   ),
+  ssr: false,
 });
 
 const Footer = dynamic(() => import("@/components/Footer"), {
   loading: () => null,
+  ssr: false,
 });
 
 const ClientToaster = dynamic(() => import("@/components/ClientToaster"), {
   loading: () => null,
+  ssr: false,
 });
 
 export default function LayoutWrapper({

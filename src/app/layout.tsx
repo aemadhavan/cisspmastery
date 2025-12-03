@@ -25,6 +25,11 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
+        <head>
+          {/* Preconnect to critical third-party origins to reduce DNS/TCP/TLS time */}
+          <link rel="preconnect" href="https://moving-doberman-55.clerk.accounts.dev" />
+          <link rel="dns-prefetch" href="https://moving-doberman-55.clerk.accounts.dev" />
+        </head>
         <body
           className="font-sans antialiased"
           suppressHydrationWarning

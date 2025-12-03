@@ -17,10 +17,10 @@ if (typeof window !== 'undefined') {
 function deferSentryInit() {
   // Use requestIdleCallback to initialize Sentry during idle time
   if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => initializeSentry(), { timeout: 3000 });
+    requestIdleCallback(() => initializeSentry(), { timeout: 10000 });
   } else {
     // Fallback for browsers without requestIdleCallback
-    setTimeout(initializeSentry, 2000);
+    setTimeout(initializeSentry, 5000);
   }
 }
 
@@ -46,32 +46,32 @@ function initializeSentry() {
     // Lazy load replay integration
     integrations: [],
 
-  // Improve performance by only tracking important transactions
-  beforeSendTransaction(transaction) {
-    // Only send page loads and navigation transactions
-    if (transaction.contexts?.trace?.op === 'pageload' ||
+    // Improve performance by only tracking important transactions
+    beforeSendTransaction(transaction) {
+      // Only send page loads and navigation transactions
+      if (transaction.contexts?.trace?.op === 'pageload' ||
         transaction.contexts?.trace?.op === 'navigation') {
-      return transaction;
-    }
-    // Drop other transactions to reduce overhead
-    return null;
-  },
-
-  // Filter out sensitive data
-  beforeSend(event) {
-    // Don't send events in development
-    if (process.env.NODE_ENV === 'development') {
+        return transaction;
+      }
+      // Drop other transactions to reduce overhead
       return null;
-    }
+    },
 
-    // Filter out sensitive headers
-    if (event.request?.headers) {
-      delete event.request.headers['authorization'];
-      delete event.request.headers['cookie'];
-    }
+    // Filter out sensitive data
+    beforeSend(event) {
+      // Don't send events in development
+      if (process.env.NODE_ENV === 'development') {
+        return null;
+      }
 
-    return event;
-  },
+      // Filter out sensitive headers
+      if (event.request?.headers) {
+        delete event.request.headers['authorization'];
+        delete event.request.headers['cookie'];
+      }
+
+      return event;
+    },
 
     // Ignore certain errors
     ignoreErrors: [

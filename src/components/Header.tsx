@@ -44,6 +44,8 @@ export default function Header() {
               className="rounded"
               quality={75}
               sizes="40px"
+              priority
+              fetchPriority="high"
             />
             <div className="text-2xl font-bold">
               <span className="text-purple-600">Cybermate</span>
