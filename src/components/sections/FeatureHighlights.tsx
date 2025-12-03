@@ -3,81 +3,76 @@ import {
   Target,
   BarChart3,
   Sparkles,
+  LucideIcon,
 } from "lucide-react";
+import SectionHeader from "../ui/SectionHeader";
+
+interface Feature {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  colorScheme: "purple" | "cyan";
+}
+
+const features: Feature[] = [
+  {
+    icon: Sparkles,
+    title: "Smart Flashcards",
+    description: "Concise, high-yield notes designed for spaced repetition. No fluff, just what you need to know.",
+    colorScheme: "purple"
+  },
+  {
+    icon: Target,
+    title: "1000+ Realistic Questions",
+    description: "Exam-quality practice questions with detailed explanations. Full mock exams included.",
+    colorScheme: "cyan"
+  },
+  {
+    icon: Brain,
+    title: "AI Adaptive Learning",
+    description: "Real-time difficulty adjustment. The AI identifies weak areas and creates your personalized path.",
+    colorScheme: "purple"
+  },
+  {
+    icon: BarChart3,
+    title: "Performance Analytics",
+    description: "Track mastery by domain. See exactly where you stand and what needs work.",
+    colorScheme: "cyan"
+  }
+];
+
+function FeatureCard({ feature }: { feature: Feature }) {
+  const { icon: Icon, title, description, colorScheme } = feature;
+  const isPurple = colorScheme === "purple";
+
+  return (
+    <div className={`group relative bg-gradient-to-br from-[#1a2235] to-[#0f1729] border border-gray-800 hover:border-${colorScheme}-500/50 rounded-2xl p-8 transition-all duration-300 hover:transform hover:scale-105`}>
+      <div className={`absolute inset-0 bg-gradient-to-br from-${colorScheme}-${isPurple ? '600' : '500'}/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+      <div className="relative">
+        <div className={`w-14 h-14 bg-gradient-to-br from-${colorScheme}-${isPurple ? '600' : '500'} to-${colorScheme}-${isPurple ? '500' : '400'} rounded-xl flex items-center justify-center mb-6 group-hover:shadow-lg group-hover:shadow-${colorScheme}-500/50 transition-shadow`}>
+          <Icon className="w-7 h-7 text-white" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
+        <p className="text-gray-400 leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function FeatureHighlights() {
   return (
     <section className="py-20 lg:py-28 relative">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-              Everything You Need to{" "}
-              <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Pass First Try
-              </span>
-            </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Stop wasting time on outdated study methods. Our AI-powered platform gives you exactly what you need to master all 8 CISSP domains.
-            </p>
-          </div>
-
+          <SectionHeader
+            title="Everything You Need to"
+            highlightedText="Pass First Try"
+            subtitle="Stop wasting time on outdated study methods. Our AI-powered platform gives you exactly what you need to master all 8 CISSP domains."
+          />
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Feature 1 */}
-            <div className="group relative bg-gradient-to-br from-[#1a2235] to-[#0f1729] border border-gray-800 hover:border-purple-500/50 rounded-2xl p-8 transition-all duration-300 hover:transform hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-500 rounded-xl flex items-center justify-center mb-6 group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-shadow">
-                  <Sparkles className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">Smart Flashcards</h3>
-                <p className="text-gray-400 leading-relaxed">
-                  Concise, high-yield notes designed for spaced repetition. No fluff, just what you need to know.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="group relative bg-gradient-to-br from-[#1a2235] to-[#0f1729] border border-gray-800 hover:border-cyan-500/50 rounded-2xl p-8 transition-all duration-300 hover:transform hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative">
-                <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-cyan-400 rounded-xl flex items-center justify-center mb-6 group-hover:shadow-lg group-hover:shadow-cyan-500/50 transition-shadow">
-                  <Target className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">1000+ Realistic Questions</h3>
-                <p className="text-gray-400 leading-relaxed">
-                  Exam-quality practice questions with detailed explanations. Full mock exams included.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="group relative bg-gradient-to-br from-[#1a2235] to-[#0f1729] border border-gray-800 hover:border-purple-500/50 rounded-2xl p-8 transition-all duration-300 hover:transform hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-500 rounded-xl flex items-center justify-center mb-6 group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-shadow">
-                  <Brain className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">AI Adaptive Learning</h3>
-                <p className="text-gray-400 leading-relaxed">
-                  Real-time difficulty adjustment. The AI identifies weak areas and creates your personalized path.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="group relative bg-gradient-to-br from-[#1a2235] to-[#0f1729] border border-gray-800 hover:border-cyan-500/50 rounded-2xl p-8 transition-all duration-300 hover:transform hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative">
-                <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-cyan-400 rounded-xl flex items-center justify-center mb-6 group-hover:shadow-lg group-hover:shadow-cyan-500/50 transition-shadow">
-                  <BarChart3 className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">Performance Analytics</h3>
-                <p className="text-gray-400 leading-relaxed">
-                  Track mastery by domain. See exactly where you stand and what needs work.
-                </p>
-              </div>
-            </div>
+            {features.map((feature, index) => (
+              <FeatureCard key={index} feature={feature} />
+            ))}
           </div>
         </div>
       </div>

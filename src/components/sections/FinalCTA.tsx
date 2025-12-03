@@ -1,45 +1,26 @@
 import { Suspense } from "react";
-import { auth } from "@clerk/nextjs/server";
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { ArrowRight, Check, Shield, Sparkles } from "lucide-react";
-
-const BuyNowButton = dynamic(() => import("@/components/BuyNowButton"), {
-  loading: () => (
-    <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold px-10 py-5 rounded-full animate-pulse h-16 w-80" />
-  ),
-  ssr: true,
-});
-
-async function HeroCTAButtons() {
-  const { has } = await auth();
-  const hasPaidPlan = has ? has({ plan: 'paid' }) : false;
-
-  return (
-    <div className="flex flex-col sm:flex-row gap-6 items-center justify-center">
-      {hasPaidPlan ? (
-        <Link
-          href="/dashboard"
-          className="group relative bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white font-bold px-10 py-5 rounded-full transition-all duration-300 flex items-center gap-3 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transform hover:scale-105 text-lg"
-        >
-          <span>Go to Dashboard</span>
-          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-        </Link>
-      ) : (
-        <BuyNowButton
-          priceId={process.env.STRIPE_LIFETIME_PRICE_ID!}
-          text="Buy Lifetime Access – $60 (50% Off)"
-          className="!bg-gradient-to-r !from-purple-600 !via-purple-500 !to-purple-600 hover:!from-purple-500 hover:!via-purple-400 hover:!to-purple-500 !text-white !font-bold !px-10 !py-5 !text-lg !shadow-2xl !shadow-purple-500/30 hover:!shadow-purple-500/50 !transform hover:!scale-105"
-        />
-      )}
-    </div>
-  );
-}
+import { Check, Shield, Sparkles, LucideIcon } from "lucide-react";
+import { FinalCTAButtons } from "./FinalCTAButtons";
 
 function CTAPlaceholder() {
   return (
     <div className="flex flex-col sm:flex-row gap-6 items-center justify-center">
       <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold px-10 py-5 rounded-full animate-pulse h-16 w-80" />
+    </div>
+  );
+}
+
+interface TrustBadgeProps {
+  icon: LucideIcon;
+  text: string;
+  iconColor: string;
+}
+
+function TrustBadge({ icon: Icon, text, iconColor }: TrustBadgeProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className={`w-4 h-4 ${iconColor}`} />
+      <span>{text}</span>
     </div>
   );
 }
@@ -61,24 +42,15 @@ export default function FinalCTA() {
           </p>
 
           <Suspense fallback={<CTAPlaceholder />}>
-            <HeroCTAButtons />
+            <FinalCTAButtons />
           </Suspense>
 
           <div className="pt-8 flex flex-wrap gap-6 justify-center items-center text-sm text-gray-400">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-green-400" />
-              <span>Secure Payment</span>
-            </div>
+            <TrustBadge icon={Shield} text="Secure Payment" iconColor="text-green-400" />
             <div className="w-px h-4 bg-gray-700" />
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-400" />
-              <span>30-Day Guarantee</span>
-            </div>
+            <TrustBadge icon={Check} text="30-Day Guarantee" iconColor="text-green-400" />
             <div className="w-px h-4 bg-gray-700" />
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span>Instant Access</span>
-            </div>
+            <TrustBadge icon={Sparkles} text="Instant Access" iconColor="text-purple-400" />
           </div>
 
           <p className="text-gray-500 text-sm max-w-2xl mx-auto pt-8">
