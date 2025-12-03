@@ -5,6 +5,10 @@ exclude_paths:
   - 'scripts/*.sql'
   - 'migration*.sql'
   - 'cleanup*.sql'
+  # Exclude lock files and generated files from all analysis
+  - 'pnpm-lock.yaml'
+  - 'package-lock.json'
+  - 'yarn.lock'
   # Exclude files with false positive Codacy warnings for valid modern JavaScript syntax
   # (template literals and trailing commas are valid ES6+ syntax)
   - 'src/components/admin/RichTextEditor.tsx'
