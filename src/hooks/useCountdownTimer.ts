@@ -29,15 +29,24 @@ function getTimeLeftUntilMidnight(now: Date = new Date()): TimeLeft {
 }
 
 export function useCountdownTimer() {
+    const [mounted, setMounted] = useState(false);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeftUntilMidnight());
 
     useEffect(() => {
+        setMounted(true);
+        setTimeLeft(getTimeLeftUntilMidnight());
+
         const timer = setInterval(() => {
             setTimeLeft(getTimeLeftUntilMidnight());
         }, 1000);
 
         return () => clearInterval(timer);
     }, []);
+
+    // Return placeholder values during SSR to avoid hydration mismatch
+    if (!mounted) {
+        return { hours: 0, minutes: 0, seconds: 0 };
+    }
 
     return timeLeft;
 }
