@@ -1,27 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+
+const SCROLL_THRESHOLD = 400;
+const INITIAL_DELAY_MS = 2000;
 
 export function useFloatingBadgeVisibility() {
     const [isVisible, setIsVisible] = useState(false);
 
+    // Show badge after a short delay
     useEffect(() => {
-        // Show badge after a short delay
-        const timer = setTimeout(() => setIsVisible(true), 2000);
+        const timer = setTimeout(() => setIsVisible(true), INITIAL_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, []);
 
-        // Handle scroll to hide/show badge
+    // Reveal badge once the user has scrolled far enough
+    useEffect(() => {
         const handleScroll = () => {
-            const scrollPosition = window.scrollY;
-            // Show badge when user scrolls down a bit
-            if (scrollPosition > 400) {
+            if (window.scrollY > SCROLL_THRESHOLD) {
                 setIsVisible(true);
             }
         };
 
         window.addEventListener("scroll", handleScroll);
-
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener("scroll", handleScroll);
-        };
+        return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
     return { isVisible, setIsVisible };

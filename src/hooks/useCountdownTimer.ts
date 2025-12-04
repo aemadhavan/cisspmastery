@@ -1,36 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+
+export interface TimeLeft {
+    hours: number;
+    minutes: number;
+    seconds: number;
+}
+
+const MS_IN_SECOND = 1000;
+const MS_IN_MINUTE = 60 * MS_IN_SECOND;
+const MS_IN_HOUR = 60 * MS_IN_MINUTE;
+
+function getTimeLeftUntilMidnight(now: Date = new Date()): TimeLeft {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const difference = tomorrow.getTime() - now.getTime();
+
+    if (difference <= 0) {
+        return { hours: 0, minutes: 0, seconds: 0 };
+    }
+
+    const hours = Math.floor(difference / MS_IN_HOUR);
+    const minutes = Math.floor((difference % MS_IN_HOUR) / MS_IN_MINUTE);
+    const seconds = Math.floor((difference % MS_IN_MINUTE) / MS_IN_SECOND);
+
+    return { hours, minutes, seconds };
+}
 
 export function useCountdownTimer() {
-    const [timeLeft, setTimeLeft] = useState({
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
-    });
+    const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeftUntilMidnight());
 
     useEffect(() => {
-        // Set timer to end at midnight (start of next day)
-        const calculateTimeLeft = () => {
-            const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
-
-            const difference = tomorrow.getTime() - now.getTime();
-
-            if (difference > 0) {
-                const hours = Math.floor(difference / (1000 * 60 * 60));
-                const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-                setTimeLeft({ hours, minutes, seconds });
-            }
-        };
-
-        // Calculate immediately
-        calculateTimeLeft();
-
-        // Update every second
-        const timer = setInterval(calculateTimeLeft, 1000);
+        const timer = setInterval(() => {
+            setTimeLeft(getTimeLeftUntilMidnight());
+        }, 1000);
 
         return () => clearInterval(timer);
     }, []);

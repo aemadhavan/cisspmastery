@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import { ArrowRight, Check, Brain, TrendingUp, Sparkles, Shield } from "lucide-react";
+import { Check, Brain, TrendingUp, Sparkles, Shield } from "lucide-react";
+import { CTAButtons } from "@/components/CTAButtons";
 
 const BuyNowButton = dynamic(() => import("@/components/BuyNowButton"), {
     loading: () => (
@@ -16,24 +16,20 @@ const BuyNowButton = dynamic(() => import("@/components/BuyNowButton"), {
 function HeroCTAButtons({ centered = false }: { centered?: boolean }) {
     const { isSignedIn } = useAuth();
 
+    const containerClassName = `flex flex-col sm:flex-row gap-6 items-center ${centered ? "justify-center" : "justify-center lg:justify-start"}`;
+
     return (
-        <div className={`flex flex-col sm:flex-row gap-6 items-center ${centered ? 'justify-center' : 'justify-center lg:justify-start'}`}>
-            {isSignedIn ? (
-                <Link
-                    href="/dashboard"
-                    className="group relative bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 hover:from-purple-500 hover:via-purple-400 hover:to-purple-500 text-white font-bold px-10 py-5 rounded-full transition-all duration-300 flex items-center gap-3 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transform hover:scale-105 text-lg"
-                >
-                    <span>Go to Dashboard</span>
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-            ) : (
+        <CTAButtons
+            isSignedIn={!!isSignedIn}
+            containerClassName={containerClassName}
+            buyNowButton={
                 <BuyNowButton
                     priceId={process.env.NEXT_PUBLIC_STRIPE_LIFETIME_PRICE_ID!}
                     text="Buy Lifetime Access – $60 (50% Off)"
                     className="!bg-gradient-to-r !from-purple-600 !via-purple-500 !to-purple-600 hover:!from-purple-500 hover:!via-purple-400 hover:!to-purple-500 !text-white !font-bold !px-10 !py-5 !text-lg !shadow-2xl !shadow-purple-500/30 hover:!shadow-purple-500/50 !transform hover:!scale-105"
                 />
-            )}
-        </div>
+            }
+        />
     );
 }
 
