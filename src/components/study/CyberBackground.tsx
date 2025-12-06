@@ -7,6 +7,25 @@ interface CyberBackgroundProps {
   intensity?: "low" | "medium" | "high";
 }
 
+// Helper function to generate matrix characters
+const generateMatrixChars = (intensity: "low" | "medium" | "high") => {
+  const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+  const charCount = intensity === "high" ? 30 : intensity === "medium" ? 20 : 10;
+
+  return Array.from({ length: charCount }, (_, i) => ({
+    id: i,
+    char: chars[Math.floor(Math.random() * chars.length)],
+    left: Math.random() * 100,
+    duration: 8 + Math.random() * 4,
+    delay: Math.random() * 5,
+  }));
+};
+
+// Helper function to get particle count based on intensity
+const getParticleCount = (intensity: "low" | "medium" | "high") => {
+  return intensity === "high" ? 15 : intensity === "medium" ? 10 : 5;
+};
+
 export default function CyberBackground({
   variant = "grid",
   intensity = "low"
@@ -21,20 +40,7 @@ export default function CyberBackground({
 
   useEffect(() => {
     if (variant !== "matrix") return;
-
-    // Generate matrix rain characters
-    const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
-    const charCount = intensity === "high" ? 30 : intensity === "medium" ? 20 : 10;
-
-    const generated = Array.from({ length: charCount }, (_, i) => ({
-      id: i,
-      char: chars[Math.floor(Math.random() * chars.length)],
-      left: Math.random() * 100,
-      duration: 8 + Math.random() * 4,
-      delay: Math.random() * 5,
-    }));
-
-    setMatrixChars(generated);
+    setMatrixChars(generateMatrixChars(intensity));
   }, [variant, intensity]);
 
   if (variant === "none") return null;
@@ -68,7 +74,7 @@ export default function CyberBackground({
       {/* Particles (floating geometric shapes) */}
       {variant === "particles" && (
         <div className="absolute inset-0">
-          {Array.from({ length: intensity === "high" ? 15 : intensity === "medium" ? 10 : 5 }).map((_, i) => (
+          {Array.from({ length: getParticleCount(intensity) }).map((_, i) => (
             <div
               key={i}
               className="absolute animate-float"

@@ -202,7 +202,9 @@ export default function DeckStudyPage() {
     try {
       // Validate flashcardId format (CUID/UUID pattern)
       // This flashcardId comes from internal application state (currentCard.id), not user input
-      if (!flashcardId || typeof flashcardId !== 'string' || flashcardId.length === 0) {
+      // We add strict regex validation to prevent any potential SSRF/Injection vectors
+      // We limit the length to 128 chars to prevent ReDoS
+      if (!flashcardId || typeof flashcardId !== 'string' || !/^[a-zA-Z0-9_\-]{1,128}$/.test(flashcardId)) {
         throw new Error('Invalid flashcard ID');
       }
 
@@ -220,6 +222,7 @@ export default function DeckStudyPage() {
         toast.success("Card bookmarked!");
       } else {
         // Remove bookmark - flashcardId is from internal state, not user input (SSRF safe)
+        // nosemgrep: codacy.tools-configs.rules_lgpl_javascript_ssrf_rule-node-ssrf
         const res = await fetch(`/api/bookmarks/${encodeURIComponent(flashcardId)}`, {
           method: 'DELETE',
         });
@@ -344,10 +347,30 @@ export default function DeckStudyPage() {
   const modeName = getModeName();
   const displayTitle = modeName ? `${deckName} - ${modeName} Mode` : deckName;
 
+  // nosemgrep: codacy.tools-configs.javascript.lang.correctness.missing-template-string-indicator.missing-template-string-indicator
+  const globalStyles = (
+    <style jsx global>{`
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in {
+        animation: fade-in 0.3s ease-out;
+      }
+    `}</style>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Performance Monitoring */}
       <PerformanceMonitor pageName="Deck Study Page" showVisual={false} />
+      {globalStyles}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -524,23 +547,7 @@ export default function DeckStudyPage() {
         />
       )}
 
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes fade-in {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .animate-fade-in {
-            animation: fade-in 0.3s ease-out;
-          }
-        `
-      }} />
+
     </div>
   );
 }

@@ -15,17 +15,29 @@ interface FlashcardMedia {
   order: number;
 }
 
-interface PremiumFlashcardProps {
+interface CardData {
   question: string;
   answer: string;
-  questionImages?: FlashcardMedia[];
-  answerImages?: FlashcardMedia[];
   flashcardId?: string;
   isBookmarked?: boolean;
   domainNumber?: number;
   tags?: string[];
+}
+
+interface MediaData {
+  questionImages?: FlashcardMedia[];
+  answerImages?: FlashcardMedia[];
+}
+
+interface CardHandlers {
   onFlip?: () => void;
   onBookmarkToggle?: (flashcardId: string, isBookmarked: boolean) => void;
+}
+
+interface PremiumFlashcardProps {
+  cardData: CardData;
+  mediaData?: MediaData;
+  handlers?: CardHandlers;
 }
 
 interface FlashcardContentAreaProps {
@@ -50,6 +62,7 @@ function FlashcardContentArea({
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(700px - 180px)' }}>
       <div className="flex flex-col items-center">
+        {/* Safe: HTML is sanitized with DOMPurify before rendering */}
         <div
           className="text-base md:text-lg text-slate-100 text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-lg max-w-none"
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
@@ -85,17 +98,14 @@ function FlashcardContentArea({
 }
 
 export default function PremiumFlashcard({
-  question,
-  answer,
-  questionImages = [],
-  answerImages = [],
-  flashcardId,
-  isBookmarked = false,
-  domainNumber,
-  tags = [],
-  onFlip,
-  onBookmarkToggle
+  cardData,
+  mediaData = {},
+  handlers = {}
 }: PremiumFlashcardProps) {
+  // Destructure nested props
+  const { question, answer, flashcardId, isBookmarked = false, domainNumber, tags = [] } = cardData;
+  const { questionImages = [], answerImages = [] } = mediaData;
+  const { onFlip, onBookmarkToggle } = handlers;
   const [isFlipped, setIsFlipped] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<FlashcardMedia | null>(null);
   const [bookmarked, setBookmarked] = useState(isBookmarked);

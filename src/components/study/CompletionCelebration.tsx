@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trophy, Flame, RotateCcw, Home, TrendingUp } from "lucide-react";
+import { Trophy, Flame, RotateCcw, Home } from "lucide-react";
 import Link from "next/link";
 
 interface CompletionCelebrationProps {
@@ -14,6 +14,41 @@ interface CompletionCelebrationProps {
   backLink?: string;
   backLinkLabel?: string;
 }
+
+// Helper function to generate confetti pieces
+const generateConfettiPieces = (count: number) => {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 0.5,
+    duration: 2 + Math.random() * 1,
+  }));
+};
+
+// Helper function to get motivational message
+const getMotivationalMessage = (streak: number, accuracy: number) => {
+  if (streak >= 7) {
+    return {
+      text: `Amazing dedication! You're on a ${streak}-day streak. Keep this momentum going to achieve CISSP mastery! 🚀`,
+      highlight: "Amazing dedication!",
+      highlightClass: "text-cyber-cyan"
+    };
+  }
+
+  if (accuracy >= 80) {
+    return {
+      text: `Excellent work! Your ${Math.round(accuracy)}% accuracy shows you're truly understanding these concepts. 💪`,
+      highlight: "Excellent work!",
+      highlightClass: "text-green-400"
+    };
+  }
+
+  return {
+    text: "Great progress! Every card brings you closer to CISSP certification. Keep going! ⭐",
+    highlight: "Great progress!",
+    highlightClass: "text-cyber-cyan"
+  };
+};
 
 export default function CompletionCelebration({
   cardsCompleted,
@@ -32,13 +67,8 @@ export default function CompletionCelebration({
     return () => clearTimeout(timer);
   }, []);
 
-  // Generate confetti pieces
-  const confettiPieces = showConfetti ? Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    delay: Math.random() * 0.5,
-    duration: 2 + Math.random() * 1,
-  })) : [];
+  const confettiPieces = showConfetti ? generateConfettiPieces(50) : [];
+  const motivationalMessage = getMotivationalMessage(streak, accuracy);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -70,7 +100,7 @@ export default function CompletionCelebration({
         </h2>
 
         <p className="text-xl text-slate-300 mb-8">
-          You've completed all {cardsCompleted} cards 🎉
+          You&apos;ve completed all {cardsCompleted} cards 🎉
         </p>
 
         {/* Stats Grid */}
@@ -118,22 +148,10 @@ export default function CompletionCelebration({
         {/* Motivational Message */}
         <div className="mb-8 p-4 rounded-xl bg-gradient-to-r from-cyber-cyan/10 to-cyber-purple/10 border border-cyber-cyan/20">
           <p className="text-sm md:text-base text-slate-300 leading-relaxed">
-            {streak >= 7 ? (
-              <>
-                <span className="font-bold text-cyber-cyan">Amazing dedication!</span> You're on a {streak}-day streak.
-                Keep this momentum going to achieve CISSP mastery! 🚀
-              </>
-            ) : accuracy >= 80 ? (
-              <>
-                <span className="font-bold text-green-400">Excellent work!</span> Your {Math.round(accuracy)}% accuracy shows
-                you're truly understanding these concepts. 💪
-              </>
-            ) : (
-              <>
-                <span className="font-bold text-cyber-cyan">Great progress!</span> Every card brings you
-                closer to CISSP certification. Keep going! ⭐
-              </>
-            )}
+            <span className={`font-bold ${motivationalMessage.highlightClass}`}>
+              {motivationalMessage.highlight}
+            </span>{' '}
+            {motivationalMessage.text.replace(motivationalMessage.highlight + '! ', '')}
           </p>
         </div>
 
@@ -165,7 +183,7 @@ export default function CompletionCelebration({
         {/* Next Steps Suggestion */}
         <div className="mt-8 pt-6 border-t border-cyber-cyan/20">
           <p className="text-sm text-slate-400 mb-3">
-            📊 What's next?
+            📊 What&apos;s next?
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center text-xs">
             <Link href="/dashboard/weak-topics" className="text-cyber-cyan hover:text-cyber-cyan-light transition-colors">

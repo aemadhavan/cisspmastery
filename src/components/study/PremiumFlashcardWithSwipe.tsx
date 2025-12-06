@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
 import { X, ZoomIn, ZoomOut, Maximize2, Bookmark, BookmarkCheck, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
@@ -16,22 +16,38 @@ interface FlashcardMedia {
   order: number;
 }
 
-interface PremiumFlashcardWithSwipeProps {
+interface CardData {
   question: string;
   answer: string;
-  questionImages?: FlashcardMedia[];
-  answerImages?: FlashcardMedia[];
   flashcardId?: string;
   isBookmarked?: boolean;
   domainNumber?: number;
   tags?: string[];
-  onFlip?: () => void;
-  onBookmarkToggle?: (flashcardId: string, isBookmarked: boolean) => void;
+}
+
+interface MediaData {
+  questionImages?: FlashcardMedia[];
+  answerImages?: FlashcardMedia[];
+}
+
+interface SwipeConfig {
+  enableSwipe?: boolean;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
-  enableSwipe?: boolean;
   currentIndex?: number;
   totalCards?: number;
+}
+
+interface CardHandlers {
+  onFlip?: () => void;
+  onBookmarkToggle?: (flashcardId: string, isBookmarked: boolean) => void;
+}
+
+interface PremiumFlashcardWithSwipeProps {
+  cardData: CardData;
+  mediaData?: MediaData;
+  swipeConfig?: SwipeConfig;
+  handlers?: CardHandlers;
 }
 
 interface FlashcardContentAreaProps {
@@ -56,6 +72,7 @@ function FlashcardContentArea({
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden px-2" style={{ maxHeight: 'calc(700px - 180px)' }}>
       <div className="flex flex-col items-center">
+        {/* Safe: HTML is sanitized with DOMPurify before rendering */}
         <div
           className="text-base md:text-lg text-slate-100 text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-lg max-w-none"
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
@@ -91,22 +108,16 @@ function FlashcardContentArea({
 }
 
 export default function PremiumFlashcardWithSwipe({
-  question,
-  answer,
-  questionImages = [],
-  answerImages = [],
-  flashcardId,
-  isBookmarked = false,
-  domainNumber,
-  tags = [],
-  onFlip,
-  onBookmarkToggle,
-  onSwipeLeft,
-  onSwipeRight,
-  enableSwipe = true,
-  currentIndex,
-  totalCards
+  cardData,
+  mediaData = {},
+  swipeConfig = {},
+  handlers = {}
 }: PremiumFlashcardWithSwipeProps) {
+  // Destructure nested props
+  const { question, answer, flashcardId, isBookmarked = false, domainNumber, tags = [] } = cardData;
+  const { questionImages = [], answerImages = [] } = mediaData;
+  const { enableSwipe = true, onSwipeLeft, onSwipeRight, currentIndex, totalCards } = swipeConfig;
+  const { onFlip, onBookmarkToggle } = handlers;
   const [isFlipped, setIsFlipped] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<FlashcardMedia | null>(null);
   const [bookmarked, setBookmarked] = useState(isBookmarked);
@@ -268,17 +279,17 @@ export default function PremiumFlashcardWithSwipe({
           {Array.from({ length: Math.min(totalCards, 10) }).map((_, idx) => (
             <div
               key={idx}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                idx === currentIndex % 10
-                  ? 'w-8 bg-cyber-cyan shadow-neon-cyan'
-                  : 'w-1.5 bg-slate-600'
-              }`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex % 10
+                ? 'w-8 bg-cyber-cyan shadow-neon-cyan'
+                : 'w-1.5 bg-slate-600'
+                }`}
             />
           ))}
         </div>
       )}
 
       <div
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ref={swipeRef as any}
         className={`relative w-full min-h-[600px] md:min-h-[700px] transition-transform duration-700 preserve-3d cursor-pointer`}
         onClick={handleFlip}

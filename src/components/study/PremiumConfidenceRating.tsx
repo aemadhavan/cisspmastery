@@ -1,16 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Flame, Brain, Zap, Target, Trophy } from "lucide-react";
+// Button removed being unused
+import { Flame, Brain, Zap, Target, Trophy, LucideIcon } from "lucide-react";
 
-interface PremiumConfidenceRatingProps {
-  onRate: (confidence: number) => void;
-  disabled?: boolean;
-  autoAdvance?: boolean;
+interface ConfidenceLevel {
+  value: number;
+  label: string;
+  shortLabel: string;
+  color: string;
+  hoverColor: string;
+  borderColor: string;
+  hoverBorderColor: string;
+  icon: LucideIcon;
+  iconColor: string;
+  description: string;
+  bgGlow: string;
 }
 
-const CONFIDENCE_LEVELS = [
+const CONFIDENCE_LEVELS: ConfidenceLevel[] = [
   {
     value: 1,
     label: "Not at all",
@@ -77,6 +85,13 @@ const CONFIDENCE_LEVELS = [
     bgGlow: "hover:shadow-[0_0_30px_rgba(34,197,94,0.4)]"
   }
 ];
+
+
+interface PremiumConfidenceRatingProps {
+  onRate: (confidence: number) => void;
+  disabled?: boolean;
+  autoAdvance?: boolean;
+}
 
 export default function PremiumConfidenceRating({
   onRate,

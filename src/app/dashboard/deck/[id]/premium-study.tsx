@@ -69,7 +69,7 @@ export default function PremiumDeckStudyPage() {
   });
 
   // Settings
-  const [backgroundVariant, setBackgroundVariant] = useState<"matrix" | "grid" | "particles" | "none">("grid");
+  const [backgroundVariant] = useState<"matrix" | "grid" | "particles" | "none">("grid");
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
   const currentCard = flashcards[currentIndex];
@@ -77,8 +77,152 @@ export default function PremiumDeckStudyPage() {
 
   // Load flashcards
   useEffect(() => {
+    const loadFlashcards = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/decks/${deckId}/flashcards`, {
+          cache: 'default',
+        });
+        if (!res.ok) throw new Error("Failed to load flashcards");
+
+        const data = await res.json();
+        setDeck(data.deck);
+
+        let cards = data.flashcards || [];
+
+        if (mode === 'random') {
+          cards = [...cards].sort(() => Math.random() - 0.5);
+        }
+
+        setFlashcards(cards);
+      } catch {
+        toast.error("Failed to load flashcards");
+      } finally {
+        setLoading(false);
+      }
+    };
     loadFlashcards();
   }, [deckId, mode]);
+
+  const handleFlip = useCallback(() => {
+    setIsFlipped(true);
+    setTimeout(() => setShowRating(true), 400);
+  }, []);
+
+  // Helper function to save progress to API
+  const saveProgressToAPI = async (flashcardId: string, confidence: number) => {
+    const res = await fetch("/api/progress/card", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        flashcardId,
+        confidenceLevel: confidence,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to save progress");
+  };
+
+  // Helper function to update studied cards
+  const markCardAsStudied = useCallback((index: number) => {
+    const newStudied = new Set(studiedCards);
+    newStudied.add(index);
+    setStudiedCards(newStudied);
+  }, [studiedCards]);
+
+  // Helper function to calculate new accuracy
+  const calculateNewAccuracy = (currentAccuracy: number, cardsToday: number, confidence: number) => {
+    return Math.round(((currentAccuracy * cardsToday + (confidence / 5 * 100)) / (cardsToday + 1)));
+  };
+
+  // Helper function to advance to next card
+  const advanceToNextCard = useCallback(() => {
+    if (currentIndex < flashcards.length - 1) {
+      setTimeout(() => {
+        setCurrentIndex(c => c + 1);
+        setShowRating(false);
+        setIsFlipped(false);
+      }, 300);
+    } else {
+      setTimeout(() => {
+        setShowRating(false);
+      }, 300);
+    }
+  }, [currentIndex, flashcards.length]);
+
+  const handleRate = useCallback(async (confidence: number) => {
+    if (!currentCard) return;
+
+    try {
+      await saveProgressToAPI(currentCard.id, confidence);
+      markCardAsStudied(currentIndex);
+
+      // Update stats
+      setUserStats(prev => ({
+        ...prev,
+        cardsToday: prev.cardsToday + 1,
+        accuracy: calculateNewAccuracy(prev.accuracy, prev.cardsToday, confidence)
+      }));
+
+      advanceToNextCard();
+    } catch (error) {
+      toast.error("Failed to save your rating");
+      console.error("Error saving progress:", error);
+    }
+  }, [currentCard, currentIndex, studiedCards, advanceToNextCard]); // Added proper dependencies
+
+  const handlePrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(c => c - 1);
+      setShowRating(false);
+      setIsFlipped(false);
+    }
+  }, [currentIndex]);
+
+  const handleNext = useCallback(() => {
+    if (currentIndex < flashcards.length - 1) {
+      setCurrentIndex(c => c + 1);
+      setShowRating(false);
+      setIsFlipped(false);
+    }
+  }, [currentIndex, flashcards.length]);
+
+  const handleReset = () => {
+    setCurrentIndex(0);
+    setStudiedCards(new Set());
+    setShowRating(false);
+    setIsFlipped(false);
+    toast.success("Progress reset! Starting from card 1");
+  };
+
+  const handleBookmarkToggle = useCallback(async (flashcardId: string, isBookmarked: boolean) => {
+    try {
+      if (isBookmarked) {
+        const res = await fetch('/api/bookmarks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flashcardId }),
+        });
+        if (!res.ok) throw new Error('Failed to add bookmark');
+        setBookmarkedCards(prev => new Set(prev).add(flashcardId));
+        toast.success("Card bookmarked!");
+      } else {
+        const res = await fetch(`/api/bookmarks/${flashcardId}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Failed to remove bookmark');
+        setBookmarkedCards(prev => {
+          const updated = new Set(prev);
+          updated.delete(flashcardId);
+          return updated;
+        });
+        toast.success("Bookmark removed");
+      }
+    } catch (error) {
+      console.error('Bookmark error:', error);
+      toast.error("Failed to update bookmark");
+    }
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -125,135 +269,17 @@ export default function PremiumDeckStudyPage() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentIndex, showRating, isFlipped, currentCard, bookmarkedCards]);
-
-  const loadFlashcards = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/decks/${deckId}/flashcards`, {
-        cache: 'default',
-      });
-      if (!res.ok) throw new Error("Failed to load flashcards");
-
-      const data = await res.json();
-      setDeck(data.deck);
-
-      let cards = data.flashcards || [];
-
-      if (mode === 'random') {
-        cards = [...cards].sort(() => Math.random() - 0.5);
-      }
-
-      setFlashcards(cards);
-    } catch {
-      toast.error("Failed to load flashcards");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFlip = () => {
-    setIsFlipped(true);
-    setTimeout(() => setShowRating(true), 400);
-  };
-
-  const handleRate = async (confidence: number) => {
-    if (!currentCard) return;
-
-    try {
-      const res = await fetch("/api/progress/card", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          flashcardId: currentCard.id,
-          confidenceLevel: confidence,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to save progress");
-
-      const newStudied = new Set(studiedCards);
-      newStudied.add(currentIndex);
-      setStudiedCards(newStudied);
-
-      // Update stats
-      setUserStats(prev => ({
-        ...prev,
-        cardsToday: prev.cardsToday + 1,
-        accuracy: Math.round(((prev.accuracy * prev.cardsToday + (confidence / 5 * 100)) / (prev.cardsToday + 1)))
-      }));
-
-      // Auto-advance to next card
-      if (currentIndex < flashcards.length - 1) {
-        setTimeout(() => {
-          setCurrentIndex(currentIndex + 1);
-          setShowRating(false);
-          setIsFlipped(false);
-        }, 300);
-      } else {
-        // Session complete
-        setTimeout(() => {
-          setShowRating(false);
-        }, 300);
-      }
-    } catch (error) {
-      toast.error("Failed to save your rating");
-      console.error("Error saving progress:", error);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setShowRating(false);
-      setIsFlipped(false);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setShowRating(false);
-      setIsFlipped(false);
-    }
-  };
-
-  const handleReset = () => {
-    setCurrentIndex(0);
-    setStudiedCards(new Set());
-    setShowRating(false);
-    setIsFlipped(false);
-    toast.success("Progress reset! Starting from card 1");
-  };
-
-  const handleBookmarkToggle = async (flashcardId: string, isBookmarked: boolean) => {
-    try {
-      if (isBookmarked) {
-        const res = await fetch('/api/bookmarks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flashcardId }),
-        });
-        if (!res.ok) throw new Error('Failed to add bookmark');
-        setBookmarkedCards(prev => new Set(prev).add(flashcardId));
-        toast.success("Card bookmarked!");
-      } else {
-        const res = await fetch(`/api/bookmarks/${flashcardId}`, {
-          method: 'DELETE',
-        });
-        if (!res.ok) throw new Error('Failed to remove bookmark');
-        setBookmarkedCards(prev => {
-          const updated = new Set(prev);
-          updated.delete(flashcardId);
-          return updated;
-        });
-        toast.success("Bookmark removed");
-      }
-    } catch (error) {
-      console.error('Bookmark error:', error);
-      toast.error("Failed to update bookmark");
-    }
-  };
+  }, [
+    showRating,
+    isFlipped,
+    currentCard,
+    bookmarkedCards,
+    handleFlip,
+    handleRate,
+    handlePrevious,
+    handleNext,
+    handleBookmarkToggle
+  ]);
 
   const getTimeSpent = () => {
     return Math.round((Date.now() - sessionStartTime) / 60000);
@@ -283,7 +309,7 @@ export default function PremiumDeckStudyPage() {
           </Link>
           <div className="text-center text-white mt-12">
             <h2 className="text-2xl font-bold mb-4">No flashcards available</h2>
-            <p className="text-slate-400">This deck doesn't have any flashcards yet.</p>
+            <p className="text-slate-400">This deck doesn&apos;t have any flashcards yet.</p>
           </div>
         </div>
       </div>
@@ -335,28 +361,34 @@ export default function PremiumDeckStudyPage() {
             {/* Flashcard */}
             {currentCard && (
               <PremiumFlashcard
-                flashcardId={currentCard.id}
-                question={currentCard.question}
-                answer={currentCard.answer}
-                isBookmarked={bookmarkedCards.has(currentCard.id)}
-                questionImages={currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order).map(m => ({
-                  id: m.id,
-                  url: m.fileUrl,
-                  altText: m.altText,
-                  placement: m.placement,
-                  order: m.order
-                }))}
-                answerImages={currentCard.media?.filter(m => m.placement === 'answer').sort((a, b) => a.order - b.order).map(m => ({
-                  id: m.id,
-                  url: m.fileUrl,
-                  altText: m.altText,
-                  placement: m.placement,
-                  order: m.order
-                }))}
-                domainNumber={currentCard.domain}
-                tags={currentCard.tags}
-                onFlip={handleFlip}
-                onBookmarkToggle={handleBookmarkToggle}
+                cardData={{
+                  question: currentCard.question,
+                  answer: currentCard.answer,
+                  flashcardId: currentCard.id,
+                  isBookmarked: bookmarkedCards.has(currentCard.id),
+                  domainNumber: currentCard.domain,
+                  tags: currentCard.tags
+                }}
+                mediaData={{
+                  questionImages: currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order).map(m => ({
+                    id: m.id,
+                    url: m.fileUrl,
+                    altText: m.altText,
+                    placement: m.placement,
+                    order: m.order
+                  })),
+                  answerImages: currentCard.media?.filter(m => m.placement === 'answer').sort((a, b) => a.order - b.order).map(m => ({
+                    id: m.id,
+                    url: m.fileUrl,
+                    altText: m.altText,
+                    placement: m.placement,
+                    order: m.order
+                  }))
+                }}
+                handlers={{
+                  onFlip: handleFlip,
+                  onBookmarkToggle: handleBookmarkToggle
+                }}
               />
             )}
 
@@ -393,6 +425,7 @@ export default function PremiumDeckStudyPage() {
 
       {/* Keyboard Shortcuts Overlay */}
       <KeyboardShortcutsOverlay
+        isOpen={showKeyboardHelp}
         onClose={() => setShowKeyboardHelp(false)}
         autoHideAfterSessions={3}
       />

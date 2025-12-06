@@ -1,7 +1,7 @@
 "use client";
 
 import { Progress } from "@/components/ui/progress";
-import { Flame, Clock, Target, TrendingUp, Award } from "lucide-react";
+import { Flame, Target, TrendingUp, Award } from "lucide-react";
 
 interface StudyProgressHeaderProps {
   currentCard: number;
@@ -12,6 +12,33 @@ interface StudyProgressHeaderProps {
   studyMode?: "progressive" | "random";
   domainProgress?: number;
   domainName?: string;
+}
+
+// Helper component for individual stat cards
+interface StatCardProps {
+  icon: React.ReactNode;
+  value: string | number;
+  label: string;
+  bgGradient: string;
+  borderColor: string;
+  iconColor: string;
+  textColor: string;
+}
+
+function StatCard({ icon, value, label, bgGradient, borderColor, iconColor, textColor }: StatCardProps) {
+  return (
+    <div className={`flex items-center gap-3 p-4 rounded-xl ${bgGradient} border ${borderColor}`}>
+      <div className="flex-shrink-0">
+        <div className={iconColor}>{icon}</div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-2xl md:text-3xl font-bold text-white">
+          {value}
+        </div>
+        <div className={`text-xs truncate ${textColor}`}>{label}</div>
+      </div>
+    </div>
+  );
 }
 
 export default function StudyProgressHeader({
@@ -31,62 +58,46 @@ export default function StudyProgressHeader({
     <div className="w-full glass-strong rounded-2xl p-6 md:p-8 border-2 border-cyber-cyan/20 mb-8">
       {/* Top Row - Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
-        {/* Streak */}
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/30">
-          <div className="flex-shrink-0">
-            <Flame className="w-6 h-6 md:w-8 md:h-8 text-orange-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl md:text-3xl font-bold text-white">
-              {streak}
-            </div>
-            <div className="text-xs text-orange-300 truncate">Day Streak</div>
-          </div>
-        </div>
+        <StatCard
+          icon={<Flame className="w-6 h-6 md:w-8 md:h-8" />}
+          value={streak}
+          label="Day Streak"
+          bgGradient="bg-gradient-to-br from-orange-500/10 to-red-500/10"
+          borderColor="border-orange-500/30"
+          iconColor="text-orange-400"
+          textColor="text-orange-300"
+        />
 
-        {/* Daily Progress */}
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
-          <div className="flex-shrink-0">
-            <Target className="w-6 h-6 md:w-8 md:h-8 text-cyber-cyan" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl md:text-3xl font-bold text-white">
-              {cardsToday}
-            </div>
-            <div className="text-xs text-cyber-cyan-light truncate">
-              / {dailyGoal} today
-            </div>
-          </div>
-        </div>
+        <StatCard
+          icon={<Target className="w-6 h-6 md:w-8 md:h-8" />}
+          value={cardsToday}
+          label={`/ ${dailyGoal} today`}
+          bgGradient="bg-gradient-to-br from-cyan-500/10 to-blue-500/10"
+          borderColor="border-cyan-500/30"
+          iconColor="text-cyber-cyan"
+          textColor="text-cyber-cyan-light"
+        />
 
-        {/* Study Mode Badge */}
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30">
-          <div className="flex-shrink-0">
-            <TrendingUp className="w-6 h-6 md:w-8 md:h-8 text-purple-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-lg md:text-xl font-bold text-white capitalize">
-              {studyMode}
-            </div>
-            <div className="text-xs text-purple-300 truncate">Mode Active</div>
-          </div>
-        </div>
+        <StatCard
+          icon={<TrendingUp className="w-6 h-6 md:w-8 md:h-8" />}
+          value={studyMode.charAt(0).toUpperCase() + studyMode.slice(1)}
+          label="Mode Active"
+          bgGradient="bg-gradient-to-br from-purple-500/10 to-pink-500/10"
+          borderColor="border-purple-500/30"
+          iconColor="text-purple-400"
+          textColor="text-purple-300"
+        />
 
-        {/* Domain Progress (if provided) */}
         {domainProgress !== undefined && (
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30">
-            <div className="flex-shrink-0">
-              <Award className="w-6 h-6 md:w-8 md:h-8 text-green-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-2xl md:text-3xl font-bold text-white">
-                {domainProgress}%
-              </div>
-              <div className="text-xs text-green-300 truncate">
-                {domainName || "Progress"}
-              </div>
-            </div>
-          </div>
+          <StatCard
+            icon={<Award className="w-6 h-6 md:w-8 md:h-8" />}
+            value={`${domainProgress}%`}
+            label={domainName || "Progress"}
+            bgGradient="bg-gradient-to-br from-green-500/10 to-emerald-500/10"
+            borderColor="border-green-500/30"
+            iconColor="text-green-400"
+            textColor="text-green-300"
+          />
         )}
       </div>
 
