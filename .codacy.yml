@@ -98,8 +98,8 @@ engines:
       # False positive: PMD incorrectly flags detectSQLInjection() as 159 lines
       # The actual function is only 10 lines (lines 134-143), PMD is miscounting
       - 'src/lib/middleware/request-validation.ts'
-      # False positive: PMD incorrectly flags hasLowConfidence() as having 10 parameters
-      # The actual function has only 1 parameter (line 26), PMD is miscounting
+      # False positive: PMD incorrectly flags hasLowConfidence() as 75 lines of code (limit 50)
+      # The actual function is only 2 lines (lines 26-28), PMD is miscounting
       - 'src/app/api/classes/[id]/study/route.ts'
       # False positive: PMD incorrectly flags handleDeleteDeck() as 57 lines
       # The actual function is only 13 lines (lines 263-275), PMD is miscounting
