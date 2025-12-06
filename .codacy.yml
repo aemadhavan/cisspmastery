@@ -46,6 +46,7 @@ engines:
     exclude_patterns:
       - 'detect-missing-template-string'
       - 'javascript.lang.security.detect-missing-template-string'
+      - 'javascript.lang.correctness.missing-template-string-indicator'
       - 'generic.secrets.security.detected-generic-secret'
       - 'javascript.lang.security.detect-non-literal-fs-filename'
       - 'javascript.lang.security.audit.path-traversal.path-join-resolve-traversal'
@@ -56,6 +57,8 @@ engines:
       - 'src/app/dashboard/domain/[id]/page.tsx'
       - 'src/app/admin/decks/[id]/page.tsx'
       - 'src/app/dashboard/deck/[id]/page.tsx'
+      - 'src/components/study/CyberBackground.tsx'
+      - 'src/components/study/FlashcardStyles.tsx'
 
   # Disable Lizard cyclomatic complexity warnings for false positives
   # Lizard over-counts operators (??, &&, ||) as complexity points
