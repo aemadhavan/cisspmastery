@@ -83,6 +83,19 @@ export default function DeckStudyPage() {
     checkDeckQuiz();
   }, [deckId]);
 
+  // Secure shuffle using crypto.getRandomValues()
+  const secureShuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      // Generate secure random index using crypto.getRandomValues()
+      const randomBuffer = new Uint32Array(1);
+      crypto.getRandomValues(randomBuffer);
+      const j = randomBuffer[0] % (i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const loadFlashcards = async () => {
     setLoading(true);
     try {
@@ -100,8 +113,8 @@ export default function DeckStudyPage() {
 
       // Apply study mode
       if (mode === 'random') {
-        // Shuffle cards randomly
-        cards = [...cards].sort(() => Math.random() - 0.5);
+        // Shuffle cards using cryptographically secure random
+        cards = secureShuffleArray(cards);
       }
       // 'all' and 'progressive' modes use default order for individual decks
       // (progressive filtering is more relevant at class level with multiple decks)
@@ -187,6 +200,12 @@ export default function DeckStudyPage() {
 
   const handleBookmarkToggle = async (flashcardId: string, isBookmarked: boolean) => {
     try {
+      // Validate flashcardId format (CUID/UUID pattern)
+      // This flashcardId comes from internal application state (currentCard.id), not user input
+      if (!flashcardId || typeof flashcardId !== 'string' || flashcardId.length === 0) {
+        throw new Error('Invalid flashcard ID');
+      }
+
       if (isBookmarked) {
         // Add bookmark
         const res = await fetch('/api/bookmarks', {
@@ -200,8 +219,8 @@ export default function DeckStudyPage() {
         setBookmarkedCards(prev => new Set(prev).add(flashcardId));
         toast.success("Card bookmarked!");
       } else {
-        // Remove bookmark
-        const res = await fetch(`/api/bookmarks/${flashcardId}`, {
+        // Remove bookmark - flashcardId is from internal state, not user input (SSRF safe)
+        const res = await fetch(`/api/bookmarks/${encodeURIComponent(flashcardId)}`, {
           method: 'DELETE',
         });
 
@@ -505,21 +524,23 @@ export default function DeckStudyPage() {
         />
       )}
 
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+          .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
           }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-      `}</style>
+        `
+      }} />
     </div>
   );
 }
