@@ -11,6 +11,76 @@ import { db, withRetry } from "@/lib/db";
 import { subscriptions, userStats, studySessions } from "@/lib/db/schema";
 import { eq, and, desc, gte } from "drizzle-orm";
 
+// Default stats values
+const DEFAULT_STATS = {
+  streak: 0,
+  minutesToday: 0,
+  cardsToday: 0,
+  accuracy: 85,
+};
+
+// Helper: Calculate total seconds from study sessions
+function calculateTotalSeconds(sessions: Array<{ studyDuration: number | null }>) {
+  return sessions.reduce((sum, session) => sum + (session.studyDuration || 0), 0);
+}
+
+// Helper: Calculate accuracy from sessions with confidence data
+function calculateAccuracy(sessions: Array<{ averageConfidence: string | null }>) {
+  const sessionsWithConfidence = sessions.filter(s => s.averageConfidence);
+  if (sessionsWithConfidence.length === 0) return 85;
+
+  const avgConfidence = sessionsWithConfidence.reduce(
+    (sum, s) => sum + parseFloat(s.averageConfidence || '0'),
+    0
+  ) / sessionsWithConfidence.length;
+
+  return Math.round((avgConfidence / 5) * 100);
+}
+
+// Helper: Get start of today timestamp
+function getStartOfToday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+// Fetch user statistics for the stats card
+async function getUserStats(userId: string) {
+  try {
+    const stats = await withRetry(
+      () => db.query.userStats.findFirst({
+        where: eq(userStats.clerkUserId, userId),
+      }),
+      { queryName: 'fetch-user-stats' }
+    );
+
+    if (!stats) return DEFAULT_STATS;
+
+    const streak = stats.studyStreakDays || 0;
+    const cardsToday = stats.dailyCardsStudiedToday || 0;
+
+    // Fetch today's study sessions
+    const todaySessions = await withRetry(
+      () => db.query.studySessions.findMany({
+        where: and(
+          eq(studySessions.clerkUserId, userId),
+          gte(studySessions.startedAt, getStartOfToday())
+        ),
+      }),
+      { queryName: 'fetch-today-sessions' }
+    );
+
+    const totalSecondsToday = calculateTotalSeconds(todaySessions);
+    const minutesToday = Math.round(totalSecondsToday / 60);
+    const accuracy = calculateAccuracy(todaySessions);
+
+    return { streak, minutesToday, cardsToday, accuracy };
+  } catch (error) {
+    console.error('[User Stats Error] Failed to fetch user stats:', error);
+    return DEFAULT_STATS;
+  }
+}
+
 // Generate dynamic metadata for SEO
 export async function generateMetadata({
   params,
@@ -116,68 +186,7 @@ export default async function ClassDetailPage({
   const userName = user?.firstName || user?.username || "there";
 
   // Fetch user stats for the stats card
-  const getUserStats = async () => {
-    const defaultStats = {
-      streak: 0,
-      minutesToday: 0,
-      cardsToday: 0,
-      accuracy: 85,
-    };
-
-    try {
-      // Get user stats from database
-      const stats = await withRetry(
-        () => db.query.userStats.findFirst({
-          where: eq(userStats.clerkUserId, userId),
-        }),
-        { queryName: 'fetch-user-stats' }
-      );
-
-      if (!stats) {
-        return defaultStats;
-      }
-
-      const streak = stats.studyStreakDays || 0;
-      const cardsToday = stats.dailyCardsStudiedToday || 0;
-
-      // Calculate minutes studied today from study sessions
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const todaySessions = await withRetry(
-        () => db.query.studySessions.findMany({
-          where: and(
-            eq(studySessions.clerkUserId, userId),
-            gte(studySessions.startedAt, today)
-          ),
-        }),
-        { queryName: 'fetch-today-sessions' }
-      );
-
-      const totalSecondsToday = todaySessions.reduce((sum, session) => {
-        return sum + (session.studyDuration || 0);
-      }, 0);
-
-      const minutesToday = Math.round(totalSecondsToday / 60);
-
-      // Calculate accuracy from today's sessions
-      let accuracy = 85;
-      const sessionsWithConfidence = todaySessions.filter(s => s.averageConfidence);
-      if (sessionsWithConfidence.length > 0) {
-        const avgConfidence = sessionsWithConfidence.reduce((sum, s) => {
-          return sum + parseFloat(s.averageConfidence || '0');
-        }, 0) / sessionsWithConfidence.length;
-        accuracy = Math.round((avgConfidence / 5) * 100);
-      }
-
-      return { streak, minutesToday, cardsToday, accuracy };
-    } catch (error) {
-      console.error('[User Stats Error] Failed to fetch user stats:', error);
-      return defaultStats;
-    }
-  };
-
-  const userStatsData = await getUserStats();
+  const userStatsData = await getUserStats(userId);
 
   return (
     <div className="min-h-screen bg-white">

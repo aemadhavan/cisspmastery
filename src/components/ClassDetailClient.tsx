@@ -33,6 +33,41 @@ interface ClassDetailClientProps {
   };
 }
 
+// Helper: Calculate overall progress from decks
+function calculateOverallProgress(decks: ClassData['decks']) {
+  const totalCards = decks.reduce((sum, deck) => sum + deck.cardCount, 0);
+  const totalStudied = decks.reduce((sum, deck) => sum + deck.studiedCount, 0);
+  return totalCards > 0 ? Math.round((totalStudied / totalCards) * 100) : 0;
+}
+
+// Helper: Get study session configuration
+function getStudySessionConfig(decksToStudy: ClassData['decks']) {
+  const hasFlashcardDecks = decksToStudy.some(d => d.type === 'flashcard');
+  const hasQuizDecks = decksToStudy.some(d => d.type === 'quiz');
+
+  return {
+    onlyQuizDecks: !hasFlashcardDecks && hasQuizDecks,
+    hasBothTypes: hasFlashcardDecks && hasQuizDecks,
+    flashcardDeckIds: decksToStudy.filter(d => d.type === 'flashcard').map(d => d.id),
+    quizDeckNames: decksToStudy.filter(d => d.type === 'quiz').map(d => d.name),
+  };
+}
+
+// Helper: Get resume study link
+function getResumeStudyLink(
+  recommendedDeck: { id: string } | null,
+  decks: ClassData['decks'],
+  studyMode: StudyMode
+) {
+  if (recommendedDeck) {
+    return `/dashboard/deck/${recommendedDeck.id}?mode=${studyMode}`;
+  }
+  if (decks.length > 0) {
+    return `/dashboard/deck/${decks[0].id}?mode=${studyMode}`;
+  }
+  return '#';
+}
+
 export default function ClassDetailClient({
   classData,
   userName,
@@ -50,12 +85,7 @@ export default function ClassDetailClient({
   const { selectedDecks, toggleDeckSelection, decksToStudy } = useDeckSelection(decks);
 
   // Calculate overall progress
-  const totalCards = useMemo(() => decks.reduce((sum, deck) => sum + deck.cardCount, 0), [decks]);
-  const totalStudied = useMemo(() => decks.reduce((sum, deck) => sum + deck.studiedCount, 0), [decks]);
-  const overallProgress = useMemo(
-    () => totalCards > 0 ? Math.round((totalStudied / totalCards) * 100) : 0,
-    [totalCards, totalStudied]
-  );
+  const overallProgress = useMemo(() => calculateOverallProgress(decks), [decks]);
 
   // Calculate domain mastery and categorize decks
   const domainProgress = useMemo(() => calculateDomainProgress(decks), [decks]);
@@ -73,19 +103,13 @@ export default function ClassDetailClient({
   const filteredPracticeDecks = useDeckFiltering(practiceDecks, activeFilter);
 
   // Study session config
-  const hasFlashcardDecks = decksToStudy.some(d => d.type === 'flashcard');
-  const hasQuizDecks = decksToStudy.some(d => d.type === 'quiz');
-  const onlyQuizDecks = !hasFlashcardDecks && hasQuizDecks;
-  const hasBothTypes = hasFlashcardDecks && hasQuizDecks;
-  const flashcardDeckIds = decksToStudy.filter(d => d.type === 'flashcard').map(d => d.id);
-  const quizDeckNames = decksToStudy.filter(d => d.type === 'quiz').map(d => d.name);
+  const studyConfig = useMemo(() => getStudySessionConfig(decksToStudy), [decksToStudy]);
 
   // Resume study link
-  const resumeStudyLink = recommendedDeck
-    ? `/dashboard/deck/${recommendedDeck.id}?mode=${studyMode}`
-    : decks.length > 0
-      ? `/dashboard/deck/${decks[0].id}?mode=${studyMode}`
-      : '#';
+  const resumeStudyLink = useMemo(
+    () => getResumeStudyLink(recommendedDeck, decks, studyMode),
+    [recommendedDeck, decks, studyMode]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -124,10 +148,10 @@ export default function ClassDetailClient({
             <StudyButton
               classId={classData.id}
               studyMode={studyMode}
-              onlyQuizDecks={onlyQuizDecks}
-              hasBothTypes={hasBothTypes}
-              flashcardDeckIds={flashcardDeckIds}
-              quizDeckNames={quizDeckNames}
+              onlyQuizDecks={studyConfig.onlyQuizDecks}
+              hasBothTypes={studyConfig.hasBothTypes}
+              flashcardDeckIds={studyConfig.flashcardDeckIds}
+              quizDeckNames={studyConfig.quizDeckNames}
             />
 
             {/* Filter Bar */}
@@ -157,13 +181,19 @@ export default function ClassDetailClient({
               <DeckSection
                 title="Your 50-Day Structured Plan"
                 decks={filteredStructuredDecks}
-                isExpanded={structuredPlanExpanded}
-                onToggleExpand={() => setStructuredPlanExpanded(!structuredPlanExpanded)}
-                selectedDecks={selectedDecks}
-                onToggleDeck={toggleDeckSelection}
-                studyMode={studyMode}
-                recommendedDeckId={recommendedDeck?.id}
-                activeFilter={activeFilter}
+                expansion={{
+                  isExpanded: structuredPlanExpanded,
+                  onToggle: () => setStructuredPlanExpanded(!structuredPlanExpanded),
+                }}
+                selection={{
+                  selectedDecks,
+                  onToggleDeck: toggleDeckSelection,
+                }}
+                filterConfig={{
+                  studyMode,
+                  recommendedDeckId: recommendedDeck?.id,
+                  activeFilter,
+                }}
               />
             )}
 
@@ -172,13 +202,19 @@ export default function ClassDetailClient({
               <DeckSection
                 title="Decks"
                 decks={filteredExtraDecks}
-                isExpanded={extraDecksExpanded}
-                onToggleExpand={() => setExtraDecksExpanded(!extraDecksExpanded)}
-                selectedDecks={selectedDecks}
-                onToggleDeck={toggleDeckSelection}
-                studyMode={studyMode}
-                recommendedDeckId={recommendedDeck?.id}
-                activeFilter={activeFilter}
+                expansion={{
+                  isExpanded: extraDecksExpanded,
+                  onToggle: () => setExtraDecksExpanded(!extraDecksExpanded),
+                }}
+                selection={{
+                  selectedDecks,
+                  onToggleDeck: toggleDeckSelection,
+                }}
+                filterConfig={{
+                  studyMode,
+                  recommendedDeckId: recommendedDeck?.id,
+                  activeFilter,
+                }}
               />
             )}
 
@@ -187,13 +223,19 @@ export default function ClassDetailClient({
               <DeckSection
                 title="Practice"
                 decks={filteredPracticeDecks}
-                isExpanded={practiceDecksExpanded}
-                onToggleExpand={() => setPracticeDecksExpanded(!practiceDecksExpanded)}
-                selectedDecks={selectedDecks}
-                onToggleDeck={toggleDeckSelection}
-                studyMode={studyMode}
-                recommendedDeckId={recommendedDeck?.id}
-                activeFilter={activeFilter}
+                expansion={{
+                  isExpanded: practiceDecksExpanded,
+                  onToggle: () => setPracticeDecksExpanded(!practiceDecksExpanded),
+                }}
+                selection={{
+                  selectedDecks,
+                  onToggleDeck: toggleDeckSelection,
+                }}
+                filterConfig={{
+                  studyMode,
+                  recommendedDeckId: recommendedDeck?.id,
+                  activeFilter,
+                }}
               />
             )}
 

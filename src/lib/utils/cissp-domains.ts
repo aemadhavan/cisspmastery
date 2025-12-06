@@ -87,6 +87,31 @@ export function getDomainInfo(domainNumber: number) {
   return CISSP_DOMAINS.find(d => d.domain === domainNumber) || null;
 }
 
+// Helper: Group flashcard decks by domain number
+function groupDecksByDomain(decks: Array<{ name: string; progress: number; type: string }>) {
+  const domainMap = new Map<number, { totalProgress: number; count: number }>();
+
+  decks.forEach(deck => {
+    if (deck.type !== 'flashcard') return;
+
+    const domain = extractDomainFromDeckName(deck.name);
+    if (!domain) return;
+
+    const current = domainMap.get(domain) || { totalProgress: 0, count: 0 };
+    domainMap.set(domain, {
+      totalProgress: current.totalProgress + deck.progress,
+      count: current.count + 1,
+    });
+  });
+
+  return domainMap;
+}
+
+// Helper: Calculate average progress for a domain
+function calculateAverageProgress(data: { totalProgress: number; count: number } | undefined): number {
+  return data ? Math.round(data.totalProgress / data.count) : 0;
+}
+
 /**
  * Calculate progress per domain from deck list
  */
@@ -95,30 +120,12 @@ export function calculateDomainProgress(decks: Array<{
   progress: number;
   type: string;
 }>) {
-  const domainMap = new Map<number, { totalProgress: number; count: number }>();
+  const domainMap = groupDecksByDomain(decks);
 
-  // Group decks by domain
-  decks.forEach(deck => {
-    const domain = extractDomainFromDeckName(deck.name);
-    if (domain && deck.type === 'flashcard') { // Only count flashcard decks for domain progress
-      const current = domainMap.get(domain) || { totalProgress: 0, count: 0 };
-      domainMap.set(domain, {
-        totalProgress: current.totalProgress + deck.progress,
-        count: current.count + 1,
-      });
-    }
-  });
-
-  // Calculate average progress per domain
-  return CISSP_DOMAINS.map(domainInfo => {
-    const data = domainMap.get(domainInfo.domain);
-    const progress = data ? Math.round(data.totalProgress / data.count) : 0;
-
-    return {
-      domain: domainInfo.domain,
-      name: domainInfo.shortName,
-      progress,
-      color: domainInfo.color,
-    };
-  });
+  return CISSP_DOMAINS.map(domainInfo => ({
+    domain: domainInfo.domain,
+    name: domainInfo.shortName,
+    progress: calculateAverageProgress(domainMap.get(domainInfo.domain)),
+    color: domainInfo.color,
+  }));
 }
