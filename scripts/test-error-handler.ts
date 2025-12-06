@@ -1,5 +1,5 @@
 
-import { withErrorHandling, ApiError } from '../src/lib/api/error-handler';
+import { withErrorHandling, ApiError, handleApiError } from '../src/lib/api/error-handler';
 import { ZodError } from 'zod';
 import { NextResponse } from 'next/server';
 
@@ -27,9 +27,6 @@ async function runTests() {
     // Wait, getStatusCode is NOT exported. I should probably export it temporarily or test via handleApiError?
     // Actually, I can just export it for testing or use `handleApiError` which calls it.
     // Let's check `handleApiError`. It returns a NextResponse with the status code.
-
-    // We need to import handleApiError to test getStatusCode indirectly
-    const { handleApiError } = require('../src/lib/api/error-handler');
 
     console.log('\nTesting getStatusCode (via handleApiError)...');
 
@@ -82,14 +79,14 @@ async function runTests() {
         headers: new Map([['x-request-id', '123']])
     };
 
-    const wrappedWithContext = withErrorHandling(async (req: any) => {
+    const wrappedWithContext = withErrorHandling(async () => {
         throw new Error('Context Test');
     });
 
     try {
         const resContext = await wrappedWithContext(req);
         assert(resContext.status === 500, 'Handler with context should return 500 on error');
-    } catch (e) {
+    } catch {
         assert(false, 'Handler with context should not throw');
     }
 

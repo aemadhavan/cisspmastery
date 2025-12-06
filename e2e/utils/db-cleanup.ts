@@ -53,8 +53,8 @@ export class DatabaseCleanup {
       }
 
       const data = await response.json();
-      const classes = data.classes || [];
-      const classToDelete = classes.find((c: any) => c.name === className);
+      const classes: Array<{ id: string; name: string }> = data.classes || [];
+      const classToDelete = classes.find((c) => c.name === className);
 
       if (classToDelete) {
         await this.page.request.delete(`/api/admin/classes/${classToDelete.id}`);

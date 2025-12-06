@@ -1,4 +1,4 @@
-const format = require('pg-format');
+import format from 'pg-format';
 
 const enumName = 'test_status';
 const sql = format('DROP TYPE IF EXISTS public.%I CASCADE;', enumName);

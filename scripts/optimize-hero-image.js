@@ -1,7 +1,7 @@
-/* eslint-disable no-undef */
-const sharp = require('sharp');
-const fs = require('fs');
-const path = require('path');
+ 
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
 
 async function optimizeHeroImage() {
   // Security Note: This script uses only literal hardcoded paths with no user input

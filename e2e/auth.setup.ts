@@ -35,7 +35,7 @@ async function verifyExistingAuth(browser: Browser): Promise<boolean> {
     await testPage.close();
     await context.close();
     console.log('⚠️  Existing authentication is invalid, re-authenticating...');
-  } catch (error) {
+  } catch {
     console.log('⚠️  Could not verify existing authentication, re-authenticating...');
   }
 

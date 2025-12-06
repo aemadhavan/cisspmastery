@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, RotateCcw, Loader2 } from "lucide-react";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import { QuizModal } from "@/components/QuizModal";
 import { FlashcardDynamic as Flashcard } from "@/components/FlashcardDynamic";
+import { StudyPageHeader } from "@/components/study/StudyPageHeader";
 import { toast } from "sonner";
 
 interface FlashcardMedia {
@@ -183,43 +183,16 @@ export default function ClassStudyPage() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <Link href={`/dashboard/class/${classId}`}>
-            <Button variant="ghost" className="text-white mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to {className}
-            </Button>
-          </Link>
-
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-sm text-purple-400 mb-1">{className}</p>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                {getModeName()} Mode
-              </h1>
-              <p className="text-gray-400">
-                Card {currentIndex + 1} of {flashcards.length}
-              </p>
-            </div>
-            <Button
-              onClick={handleReset}
-              variant="outline"
-              className="border-purple-400 text-purple-200 hover:bg-purple-500/10"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset Progress
-            </Button>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">Progress</span>
-              <span className="text-sm text-gray-400">{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" aria-label="Study session progress" />
-          </div>
-        </div>
+        <StudyPageHeader
+          backLink={`/dashboard/class/${classId}`}
+          backLabel={className}
+          subtitle={className}
+          title={`${getModeName()} Mode`}
+          currentIndex={currentIndex}
+          totalCards={flashcards.length}
+          onReset={handleReset}
+          progress={progress}
+        />
 
         {/* Flashcard or Completion */}
         {!allCardsStudied ? (

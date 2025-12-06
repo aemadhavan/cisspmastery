@@ -2,42 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, RotateCcw, ChevronLeft, ChevronRight, TestTube } from "lucide-react";
+import { ChevronLeft, ChevronRight, TestTube } from "lucide-react";
 import ConfidenceRating from "@/components/ConfidenceRating";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import { QuizModal } from "@/components/QuizModal";
 import { DeckQuizModal } from "@/components/DeckQuizModal";
 import { FlashcardDynamic as Flashcard } from "@/components/FlashcardDynamic";
+import { StudyPageHeader } from "@/components/study/StudyPageHeader";
+import { EmptyDeckState } from "@/components/study/EmptyDeckState";
+import { DeckCompletionState } from "@/components/study/DeckCompletionState";
 import { toast } from "sonner";
+import { useDeckData } from "@/components/study/hooks/useDeckData";
 
-interface FlashcardMedia {
-  id: string;
-  fileUrl: string;
-  altText: string | null;
-  placement: string;
-  order: number;
-}
 
-interface FlashcardData {
-  id: string;
-  question: string;
-  answer: string;
-  explanation: string | null;
-  deckName: string;
-  className: string;
-  media: FlashcardMedia[];
-}
 
-interface DeckData {
-  id: string;
-  name: string;
-  description: string | null;
-  classId: string;
-  className: string;
-}
+const FLASHCARD_ID_PATTERN = /^[a-zA-Z0-9_\-]{1,128}$/;
 
 export default function DeckStudyPage() {
   const params = useParams();
@@ -45,9 +25,7 @@ export default function DeckStudyPage() {
   const deckId = params.id as string;
   const mode = searchParams.get('mode') || 'all';
 
-  const [flashcards, setFlashcards] = useState<FlashcardData[]>([]);
-  const [deck, setDeck] = useState<DeckData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { deck, flashcards, loading } = useDeckData(deckId, mode);
   const [bookmarkedCards, setBookmarkedCards] = useState<Set<string>>(new Set());
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -62,11 +40,7 @@ export default function DeckStudyPage() {
   const currentCard = flashcards[currentIndex];
   const progress = flashcards.length > 0 ? (studiedCards.size / flashcards.length) * 100 : 0;
 
-  // Load flashcards on mount
-  useEffect(() => {
-    loadFlashcards();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckId, mode]);
+
 
   // Check if deck has quiz on mount
   useEffect(() => {
@@ -83,49 +57,7 @@ export default function DeckStudyPage() {
     checkDeckQuiz();
   }, [deckId]);
 
-  // Secure shuffle using crypto.getRandomValues()
-  const secureShuffleArray = <T,>(array: T[]): T[] => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      // Generate secure random index using crypto.getRandomValues()
-      const randomBuffer = new Uint32Array(1);
-      crypto.getRandomValues(randomBuffer);
-      const j = randomBuffer[0] % (i + 1);
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
 
-  const loadFlashcards = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/decks/${deckId}/flashcards`, {
-        // Use default caching to respect server Cache-Control headers
-        // This allows updates to be visible within 10 seconds
-        cache: 'default',
-      });
-      if (!res.ok) throw new Error("Failed to load flashcards");
-
-      const data = await res.json();
-      setDeck(data.deck);
-
-      let cards = data.flashcards || [];
-
-      // Apply study mode
-      if (mode === 'random') {
-        // Shuffle cards using cryptographically secure random
-        cards = secureShuffleArray(cards);
-      }
-      // 'all' and 'progressive' modes use default order for individual decks
-      // (progressive filtering is more relevant at class level with multiple decks)
-
-      setFlashcards(cards);
-    } catch {
-      toast.error("Failed to load flashcards");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleRate = async (confidence: number) => {
     if (!currentCard) return;
@@ -204,7 +136,8 @@ export default function DeckStudyPage() {
       // This flashcardId comes from internal application state (currentCard.id), not user input
       // We add strict regex validation to prevent any potential SSRF/Injection vectors
       // We limit the length to 128 chars to prevent ReDoS
-      if (!flashcardId || typeof flashcardId !== 'string' || !/^[a-zA-Z0-9_\-]{1,128}$/.test(flashcardId)) {
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+      if (!flashcardId || typeof flashcardId !== 'string' || !FLASHCARD_ID_PATTERN.test(flashcardId)) {
         throw new Error('Invalid flashcard ID');
       }
 
@@ -221,8 +154,10 @@ export default function DeckStudyPage() {
         setBookmarkedCards(prev => new Set(prev).add(flashcardId));
         toast.success("Card bookmarked!");
       } else {
-        // Remove bookmark - flashcardId is from internal state, not user input (SSRF safe)
-        // nosemgrep: codacy.tools-configs.rules_lgpl_javascript_ssrf_rule-node-ssrf
+        // SSRF Protection: 
+        // 1. Hardcoded prefix '/api/bookmarks/' forces a relative URL, preventing external domain access.
+        // 2. flashcardId is validated against stricter FLASHCARD_ID_PATTERN (alphanumeric allowlist) above.
+        // 3. encodeURIComponent prevents path traversal or special character injection.
         const res = await fetch(`/api/bookmarks/${encodeURIComponent(flashcardId)}`, {
           method: 'DELETE',
         });
@@ -275,56 +210,14 @@ export default function DeckStudyPage() {
   }
 
   if (flashcards.length === 0) {
-    const deckName = deck?.name || "Unknown Deck";
-    const className = deck?.className || "Unknown Class";
-
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Link href={deck?.classId ? `/dashboard/class/${deck.classId}` : "/dashboard"}>
-            <Button variant="ghost" className="text-white mb-6">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to {className}
-            </Button>
-          </Link>
-
-          <div className="mb-8">
-            <p className="text-sm text-purple-400 mb-1">{className}</p>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-              {deckName}
-            </h1>
-
-            {/* Show Take Deck Test button if quiz available */}
-            {deckHasQuiz && (
-              <Button
-                onClick={handleDeckTest}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-              >
-                <TestTube className="w-4 h-4 mr-2" />
-                Take Deck Test
-              </Button>
-            )}
-          </div>
-
-          <div className="text-center text-white mt-12">
-            <h2 className="text-xl font-bold mb-4">No flashcards available</h2>
-            <p className="text-gray-400">This deck doesn&apos;t have any flashcards yet.</p>
-            {deckHasQuiz && (
-              <p className="text-blue-400 mt-4">But you can still take the deck test above!</p>
-            )}
-          </div>
-        </div>
-
-        {/* Deck Quiz Modal */}
-        {deckHasQuiz && (
-          <DeckQuizModal
-            isOpen={showDeckQuizModal}
-            onClose={() => setShowDeckQuizModal(false)}
-            deckId={deckId}
-            deckName={deckName}
-          />
-        )}
-      </div>
+      <EmptyDeckState
+        deck={deck}
+        deckHasQuiz={deckHasQuiz}
+        showDeckQuizModal={showDeckQuizModal}
+        setShowDeckQuizModal={setShowDeckQuizModal}
+        onDeckTest={handleDeckTest}
+      />
     );
   }
 
@@ -347,9 +240,9 @@ export default function DeckStudyPage() {
   const modeName = getModeName();
   const displayTitle = modeName ? `${deckName} - ${modeName} Mode` : deckName;
 
-  // nosemgrep: codacy.tools-configs.javascript.lang.correctness.missing-template-string-indicator.missing-template-string-indicator
+  // nosemgrep: javascript.lang.correctness.missing-template-string-indicator
   const globalStyles = (
-    <style jsx global>{`
+    <style jsx global>{`${""}
       @keyframes fade-in {
         from {
           opacity: 0;
@@ -374,55 +267,29 @@ export default function DeckStudyPage() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <Link href={deck?.classId ? `/dashboard/class/${deck.classId}` : "/dashboard"}>
-            <Button variant="ghost" className="text-white mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to {className}
-            </Button>
-          </Link>
-
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-sm text-purple-400 mb-1">{className}</p>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                {displayTitle}
-              </h1>
-              <p className="text-gray-400">
-                Card {currentIndex + 1} of {flashcards.length}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {deckHasQuiz && (
-                <Button
-                  onClick={handleDeckTest}
-                  variant="outline"
-                  className="border-blue-400 text-blue-200 hover:bg-blue-500/10"
-                >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  Take Deck Test
-                </Button>
-              )}
+        <StudyPageHeader
+          backLink={deck?.classId ? `/dashboard/class/${deck.classId}` : "/dashboard"}
+          backLabel={className}
+          subtitle={className}
+          title={displayTitle}
+          currentIndex={currentIndex}
+          totalCards={flashcards.length}
+          onReset={handleReset}
+          progress={progress}
+          progressLabel="Deck study progress"
+          extraActions={
+            deckHasQuiz && (
               <Button
-                onClick={handleReset}
+                onClick={handleDeckTest}
                 variant="outline"
-                className="border-purple-400 text-purple-200 hover:bg-purple-500/10"
+                className="border-blue-400 text-blue-200 hover:bg-blue-500/10"
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Reset Progress
+                <TestTube className="w-4 h-4 mr-2" />
+                Take Deck Test
               </Button>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">Progress</span>
-              <span className="text-sm text-gray-400">{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" aria-label="Deck study progress" />
-          </div>
-        </div>
+            )
+          }
+        />
 
         {/* Flashcard or Completion */}
         {!allCardsStudied ? (
@@ -488,29 +355,11 @@ export default function DeckStudyPage() {
             )}
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto text-center space-y-6">
-            <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-3xl font-bold text-white">
-              Great Job!
-            </h2>
-            <p className="text-xl text-gray-300">
-              You&apos;ve completed all {flashcards.length} cards in this deck.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                onClick={handleReset}
-                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Study Again
-              </Button>
-              <Link href={deck?.classId ? `/dashboard/class/${deck.classId}` : "/dashboard"}>
-                <Button variant="outline" className="border-purple-400 text-purple-200 hover:bg-purple-500/10 w-full sm:w-auto">
-                  Back to {className}
-                </Button>
-              </Link>
-            </div>
-          </div>
+          <DeckCompletionState
+            flashcardCount={flashcards.length}
+            deck={deck}
+            onReset={handleReset}
+          />
         )}
 
         {/* Study Tips - Removed backdrop-blur for better performance */}

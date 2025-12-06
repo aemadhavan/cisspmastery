@@ -43,6 +43,20 @@ interface DeckData {
   className: string;
 }
 
+const processMediaForPlacement = (media: FlashcardMedia[] | undefined, placement: string) => {
+  if (!media) return [];
+  return media
+    .filter(m => m.placement === placement)
+    .sort((a, b) => a.order - b.order)
+    .map(m => ({
+      id: m.id,
+      url: m.fileUrl,
+      altText: m.altText,
+      placement: m.placement,
+      order: m.order
+    }));
+};
+
 export default function PremiumDeckStudyPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -169,7 +183,7 @@ export default function PremiumDeckStudyPage() {
       toast.error("Failed to save your rating");
       console.error("Error saving progress:", error);
     }
-  }, [currentCard, currentIndex, studiedCards, advanceToNextCard]); // Added proper dependencies
+  }, [currentCard, currentIndex, advanceToNextCard, markCardAsStudied]);
 
   const handlePrevious = useCallback(() => {
     if (currentIndex > 0) {
@@ -370,20 +384,8 @@ export default function PremiumDeckStudyPage() {
                   tags: currentCard.tags
                 }}
                 mediaData={{
-                  questionImages: currentCard.media?.filter(m => m.placement === 'question').sort((a, b) => a.order - b.order).map(m => ({
-                    id: m.id,
-                    url: m.fileUrl,
-                    altText: m.altText,
-                    placement: m.placement,
-                    order: m.order
-                  })),
-                  answerImages: currentCard.media?.filter(m => m.placement === 'answer').sort((a, b) => a.order - b.order).map(m => ({
-                    id: m.id,
-                    url: m.fileUrl,
-                    altText: m.altText,
-                    placement: m.placement,
-                    order: m.order
-                  }))
+                  questionImages: processMediaForPlacement(currentCard.media, 'question'),
+                  answerImages: processMediaForPlacement(currentCard.media, 'answer')
                 }}
                 handlers={{
                   onFlip: handleFlip,

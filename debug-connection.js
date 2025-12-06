@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { Client } = require('pg');
 require('dotenv').config({ path: '.env.local' });
 
@@ -91,9 +92,9 @@ async function debugConnection() {
     } catch (error) {
         try {
             await client.query('ROLLBACK');
-        } catch (e) {
-            // ignore
-        }
+    } catch {
+        // ignore
+    }
         console.error('\n❌ Error:', error.message);
         console.error(error.stack);
         process.exit(1);

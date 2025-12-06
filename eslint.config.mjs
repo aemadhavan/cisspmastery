@@ -20,7 +20,7 @@ let baseConfigs = [];
 try {
   baseConfigs = compat.extends("next/core-web-vitals", "next/typescript");
 } catch (error) {
-  // eslint-disable-next-line no-console -- This only runs during config load
+   
   console.warn(
     "[eslint.config.mjs] Could not load 'next/core-web-vitals' or 'next/typescript'. " +
       "Falling back to a minimal ESLint config. Original error:",

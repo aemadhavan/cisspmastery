@@ -3,6 +3,24 @@
  * Run with: npx tsx scripts/test-api-response.ts
  */
 
+interface MediaItem {
+  placement: string;
+  order: number;
+  fileUrl: string;
+  altText: string | null;
+}
+
+interface FlashcardItem {
+  question: string;
+  media?: MediaItem[];
+}
+
+interface ApiResponse {
+  total: number;
+  deck: { name: string };
+  flashcards: FlashcardItem[];
+}
+
 async function testAPIResponse() {
   try {
     // Find the Test Deck ID
@@ -28,14 +46,14 @@ async function testAPIResponse() {
       return;
     }
 
-    const data = await response.json();
+    const data: ApiResponse = await response.json();
 
     console.log('✅ API Response received\n');
     console.log(`Total flashcards: ${data.total}`);
     console.log(`Deck: ${data.deck.name}\n`);
 
     // Find the test card
-    const testCard = data.flashcards.find((card: any) =>
+    const testCard = data.flashcards.find((card: FlashcardItem) =>
       card.question.includes('Test Question with Image')
     );
 
@@ -46,7 +64,7 @@ async function testAPIResponse() {
 
       if (testCard.media && testCard.media.length > 0) {
         console.log('\n  Media details:');
-        testCard.media.forEach((m: any) => {
+        testCard.media.forEach((m: MediaItem) => {
           console.log(`    - ${m.placement} #${m.order}`);
           console.log(`      fileUrl: ${m.fileUrl}`);
           console.log(`      altText: ${m.altText}`);

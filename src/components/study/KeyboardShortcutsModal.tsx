@@ -1,16 +1,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const SHORTCUTS = [
-    { key: "Space", description: "Flip card / Show answer", icon: "⎵" },
-    { key: "1-5", description: "Rate confidence (1=Again, 5=Perfect)", icon: "1-5" },
-    { key: "←", description: "Previous card", icon: "←" },
-    { key: "→", description: "Next card", icon: "→" },
-    { key: "B", description: "Bookmark current card", icon: "B" },
-    { key: "?", description: "Show/hide this help", icon: "?" },
-    { key: "Esc", description: "Close modals", icon: "Esc" },
-];
+import { ShortcutGrid } from "./shortcuts/ShortcutGrid";
 
 interface KeyboardShortcutsModalProps {
     onClose: () => void;
@@ -66,27 +57,7 @@ export function KeyboardShortcutsModal({
                         </div>
                     </div>
 
-                    {/* Shortcuts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                        {SHORTCUTS.map((shortcut, index) => (
-                            <div
-                                key={index}
-                                className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-cyber-bg-light/50 to-cyber-bg-lighter/50 border border-cyber-cyan/20 hover:border-cyber-cyan/40 transition-colors group"
-                            >
-                                {/* Key */}
-                                <div className="flex-shrink-0 min-w-[60px] flex justify-center">
-                                    <kbd className="px-3 py-2 bg-cyber-bg border-2 border-cyber-cyan/40 rounded-lg font-mono text-lg font-bold text-cyber-cyan-light group-hover:text-cyber-cyan group-hover:border-cyber-cyan/60 transition-all shadow-lg">
-                                        {shortcut.icon}
-                                    </kbd>
-                                </div>
-
-                                {/* Description */}
-                                <div className="flex-1 text-slate-300 text-sm group-hover:text-white transition-colors">
-                                    {shortcut.description}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <ShortcutGrid />
 
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-4 border-t border-cyber-cyan/20">

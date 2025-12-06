@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { isHelpKey, isCloseKey } from "./keyboardUtils";
 
 interface UseKeyboardShortcutsProps {
     onClose?: () => void;
@@ -33,8 +34,9 @@ export function useKeyboardShortcuts({
 
         if (count < autoHideAfterSessions) {
             // Show overlay for first few sessions
-            setTimeout(() => setIsVisible(true), 1000);
+            const timer = setTimeout(() => setIsVisible(true), 1000);
             localStorage.setItem("keyboard-shortcuts-seen", String(count + 1));
+            return () => clearTimeout(timer);
         }
     }, [autoHideAfterSessions]);
 
@@ -45,12 +47,6 @@ export function useKeyboardShortcuts({
 
     // Keyboard event listeners
     useEffect(() => {
-        const isHelpKey = (e: KeyboardEvent) =>
-            e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey;
-
-        const isCloseKey = (e: KeyboardEvent) =>
-            e.key === "Escape" && isVisible && !isMinimized;
-
         const handleKeyPress = (e: KeyboardEvent) => {
             // Toggle help with '?' key
             if (isHelpKey(e)) {
@@ -60,7 +56,7 @@ export function useKeyboardShortcuts({
             }
 
             // Close with Escape
-            if (isCloseKey(e)) {
+            if (isCloseKey(e, isVisible, isMinimized)) {
                 handleClose();
             }
         };

@@ -12,7 +12,7 @@ try {
             },
         },
     });
-    console.log("variants created successfully");
+    console.log("variants created successfully", variants);
 } catch (e) {
     console.error("Error using cva:", e);
 }

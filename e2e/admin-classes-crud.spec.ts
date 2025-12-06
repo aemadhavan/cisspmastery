@@ -27,7 +27,7 @@ test.describe('Admin Classes CRUD Operations', () => {
    * ============================================================
    */
   test.describe('CREATE Operations', () => {
-    test('TC-1.1: Create a new class with all fields', async ({ page }) => {
+    test('TC-1.1: Create a new class with all fields', async () => {
       const initialCount = await helpers.getTotalClassesCount();
 
       await helpers.clickNewClass();
@@ -58,7 +58,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(isDraft).toBe(false);
     });
 
-    test('TC-1.2: Create an unpublished draft class', async ({ page }) => {
+    test('TC-1.2: Create an unpublished draft class', async () => {
       const initialPublishedCount = await helpers.getPublishedClassesCount();
 
       await helpers.clickNewClass();
@@ -104,9 +104,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       await expect(dialog).toBeVisible();
     });
 
-    test('TC-1.4: Create class with minimal required fields', async ({
-      page,
-    }) => {
+    test('TC-1.4: Create class with minimal required fields', async () => {
       await helpers.clickNewClass();
       await helpers.fillClassForm({
         name: 'Minimal Class Test',
@@ -119,7 +117,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(exists).toBe(true);
     });
 
-    test('TC-1.5: Cancel class creation', async ({ page }) => {
+    test('TC-1.5: Cancel class creation', async () => {
       const initialCount = await helpers.getTotalClassesCount();
 
       await helpers.clickNewClass();
@@ -200,7 +198,7 @@ test.describe('Admin Classes CRUD Operations', () => {
    * ============================================================
    */
   test.describe('UPDATE Operations', () => {
-    test('TC-3.1: Update class name and description', async ({ page }) => {
+    test('TC-3.1: Update class name and description', async () => {
       // Create a class first
       await helpers.clickNewClass();
       await helpers.fillClassForm({
@@ -229,7 +227,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(newExists).toBe(true);
     });
 
-    test('TC-3.2: Change class color and icon', async ({ page }) => {
+    test('TC-3.2: Change class color and icon', async () => {
       // Create a class
       await helpers.clickNewClass();
       await helpers.fillClassForm({
@@ -256,9 +254,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(exists).toBe(true);
     });
 
-    test('TC-3.3: Toggle publish status from draft to published', async ({
-      page,
-    }) => {
+    test('TC-3.3: Toggle publish status from draft to published', async () => {
       const initialPublishedCount = await helpers.getPublishedClassesCount();
 
       // Create draft class
@@ -293,7 +289,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(newPublishedCount).toBe(initialPublishedCount + 1);
     });
 
-    test('TC-3.4: Update display order', async ({ page }) => {
+    test('TC-3.4: Update display order', async () => {
       await helpers.clickNewClass();
       await helpers.fillClassForm({
         name: 'Test Order Change',
@@ -313,7 +309,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       await helpers.waitForToast('Class updated successfully');
     });
 
-    test('TC-3.5: Cancel update operation', async ({ page }) => {
+    test('TC-3.5: Cancel update operation', async () => {
       await helpers.clickNewClass();
       await helpers.fillClassForm({
         name: 'Unchanged Class',
@@ -346,7 +342,7 @@ test.describe('Admin Classes CRUD Operations', () => {
    * ============================================================
    */
   test.describe('DELETE Operations', () => {
-    test('TC-4.1: Delete a class successfully', async ({ page }) => {
+    test('TC-4.1: Delete a class successfully', async () => {
       // Create a class to delete
       await helpers.clickNewClass();
       await helpers.fillClassForm({
@@ -373,7 +369,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(newCount).toBe(initialCount - 1);
     });
 
-    test('TC-4.2: Cancel delete operation', async ({ page }) => {
+    test('TC-4.2: Cancel delete operation', async () => {
       await helpers.clickNewClass();
       await helpers.fillClassForm({
         name: 'Do Not Delete',
@@ -423,9 +419,7 @@ test.describe('Admin Classes CRUD Operations', () => {
    * ============================================================
    */
   test.describe('Edge Cases and Validation', () => {
-    test('TC-5.1: Create class with special characters in name', async ({
-      page,
-    }) => {
+    test('TC-5.1: Create class with special characters in name', async () => {
       const specialName = 'Test & "Special" Characters <>';
 
       await helpers.clickNewClass();
@@ -441,9 +435,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(exists).toBe(true);
     });
 
-    test('TC-5.2: Create class with very long description', async ({
-      page,
-    }) => {
+    test('TC-5.2: Create class with very long description', async () => {
       const longDescription =
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(10);
 
@@ -509,7 +501,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(exists).toBe(true);
     });
 
-    test('TC-5.5: Test with order value of 0', async ({ page }) => {
+    test('TC-5.5: Test with order value of 0', async () => {
       await helpers.clickNewClass();
       await helpers.fillClassForm({
         name: 'Zero Order Test',
@@ -523,7 +515,7 @@ test.describe('Admin Classes CRUD Operations', () => {
       expect(exists).toBe(true);
     });
 
-    test('TC-5.6: Test rapid consecutive operations', async ({ page }) => {
+    test('TC-5.6: Test rapid consecutive operations', async () => {
       // Increase timeout for this test since it involves multiple sequential operations
       test.setTimeout(60000);
 
