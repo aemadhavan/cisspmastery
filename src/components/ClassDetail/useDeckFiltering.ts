@@ -7,18 +7,29 @@ interface DeckWithProgress {
   type: "flashcard" | "quiz";
 }
 
-// Filter predicate functions
-const FILTER_PREDICATES: Record<DeckFilter, (deck: DeckWithProgress) => boolean> = {
-  all: () => true,
-  "not-started": (deck) => deck.progress === 0,
-  "in-progress": (deck) => deck.progress > 0 && deck.progress < 90,
-  mastered: (deck) => deck.progress >= 90,
-  quiz: (deck) => deck.type === 'quiz',
-};
+function isInProgress(progress: number): boolean {
+  return progress > 0 && progress < 90;
+}
 
 function matchesFilter<T extends DeckWithProgress>(deck: T, filter: DeckFilter): boolean {
-  const predicate = FILTER_PREDICATES[filter];
-  return predicate ? predicate(deck) : true;
+  // Use switch statement for explicit, safe filtering (prevents dynamic code execution)
+  switch (filter) {
+    case "all":
+      return true;
+    case "not-started":
+      return deck.progress === 0;
+    case "in-progress":
+      return isInProgress(deck.progress);
+    case "mastered":
+      return deck.progress >= 90;
+    case "quiz":
+      return deck.type === 'quiz';
+    default:
+      // Exhaustive check - TypeScript will error if a DeckFilter case is missing
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _exhaustiveCheck: never = filter;
+      return true;
+  }
 }
 
 export function useDeckFiltering<T extends DeckWithProgress>(
