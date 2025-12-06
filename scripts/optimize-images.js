@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-env node */
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
