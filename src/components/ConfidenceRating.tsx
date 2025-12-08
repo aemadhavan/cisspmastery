@@ -22,7 +22,7 @@ export default function ConfidenceRating({ onRate, disabled = false }: Confidenc
         <h3 className="text-lg font-semibold text-white mb-1">
           How well did you know this?
         </h3>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-300">
           Be honest - this helps us optimize your learning
         </p>
       </div>

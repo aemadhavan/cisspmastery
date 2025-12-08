@@ -112,7 +112,7 @@ export default function ClassDetailClient({
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <HeroSection
@@ -164,7 +164,7 @@ export default function ClassDetailClient({
             {/* Recommended Deck (if exists and not filtered out) */}
             {recommendedDeck && activeFilter === "all" && (
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                   <span className="text-2xl">⭐</span> Recommended Next Deck
                 </h2>
                 <ModernDeckCard

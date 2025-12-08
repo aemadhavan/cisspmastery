@@ -3,7 +3,8 @@
 import { useAuth } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import { Check, Brain, TrendingUp, Sparkles, Shield } from "lucide-react";
+import Image from "next/image";
+import { Sparkles, Shield } from "lucide-react";
 import { CTAButtons } from "@/components/CTAButtons";
 
 const BuyNowButton = dynamic(() => import("@/components/BuyNowButton"), {
@@ -105,8 +106,31 @@ export default function HeroSection() {
 
                         {/* Right Image/Visual */}
                         <div className="relative lg:block hidden">
-                            <div className="relative w-full aspect-square">
+                            <div className="relative w-full max-w-md mx-auto">
                                 {/* Decorative elements */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-purple-600/30 to-cyan-500/30 rounded-3xl blur-2xl" />
+                                <div className="relative bg-gradient-to-br from-[#1a2235] to-[#0f1729] border border-purple-500/30 rounded-3xl p-6 shadow-2xl backdrop-blur-sm">
+                                    <div className="space-y-4 text-center">
+                                        <Image
+                                            src="/images/raju.jpg"
+                                            alt="Raju - CISSP Certified Instructor"
+                                            width={400}
+                                            height={400}
+                                            className="rounded-2xl mx-auto"
+                                            quality={90}
+                                        />
+                                        <div className="space-y-1.5 pb-2">
+                                            <p className="text-base font-semibold text-white">CISSP Certified | Industry Practitioner</p>
+                                            <p className="text-lg font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">Your Personal Certification Coach</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* COMMENTED OUT - Stats Section
+                        <div className="relative lg:block hidden">
+                            <div className="relative w-full aspect-square">
                                 <div className="absolute inset-0 bg-gradient-to-br from-purple-600/30 to-cyan-500/30 rounded-3xl blur-2xl" />
                                 <div className="relative bg-gradient-to-br from-[#1a2235] to-[#0f1729] border border-purple-500/30 rounded-3xl p-8 shadow-2xl backdrop-blur-sm">
                                     <div className="space-y-6">
@@ -141,6 +165,7 @@ export default function HeroSection() {
                                 </div>
                             </div>
                         </div>
+                        */}
                     </div>
 
                     {/* Trusted by logos */}

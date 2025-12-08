@@ -29,7 +29,7 @@ const reasons: Reason[] = [
   },
   {
     icon: Brain,
-    title: "Exam-Like Questions",
+    title: "Core Concept Based Questions",
     description: "Practice with questions that mirror the real CISSP format, difficulty, and thinking style.",
     colorScheme: "purple"
   },

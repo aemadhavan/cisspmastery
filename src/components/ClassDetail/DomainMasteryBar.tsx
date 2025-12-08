@@ -14,8 +14,8 @@ interface DomainMasteryBarProps {
 export function DomainMasteryBar({ domainProgress }: DomainMasteryBarProps) {
   return (
     <div className="mb-8">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Domain Mastery Overview</h3>
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <h3 className="text-lg font-semibold text-white mb-4">Domain Mastery Overview</h3>
+      <div className="bg-white/95 rounded-xl border border-gray-200 p-6 shadow-sm">
         {/* Progress bar */}
         <div className="flex h-8 rounded-full overflow-hidden mb-4 shadow-inner">
           {domainProgress.map((domain) => (

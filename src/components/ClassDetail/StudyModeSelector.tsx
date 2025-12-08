@@ -11,7 +11,7 @@ interface StudyModeSelectorProps {
 
 export function StudyModeSelector({ mode, onModeChange, onShowInfo }: StudyModeSelectorProps) {
   return (
-    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+    <div className="flex items-center gap-1 bg-white/95 p-1 rounded-lg">
       <button
         onClick={() => onModeChange("progressive")}
         className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-all ${

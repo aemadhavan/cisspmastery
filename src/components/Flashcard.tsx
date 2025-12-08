@@ -46,7 +46,7 @@ function FlashcardContentArea({
       <div className="flex flex-col items-center">
         {/* nosemgrep: react-dangerouslysetinnerhtml - Content is sanitized with DOMPurify using strict allowlist */}
         <div
-          className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 max-w-5xl prose prose-invert prose-sm sm:prose-base max-w-none"
+          className="text-sm sm:text-base text-white text-left leading-relaxed mb-6 prose prose-invert prose-sm sm:prose-base max-w-none"
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
 
@@ -301,7 +301,7 @@ export default function Flashcard({
 
         {/* Back of card (Answer) */}
         <Card
-          className="absolute inset-0 backface-hidden bg-gradient-to-br from-purple-600 to-purple-700 border-purple-500"
+          className="absolute inset-0 backface-hidden bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729] border-blue-500/20"
           style={{
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
@@ -311,7 +311,7 @@ export default function Flashcard({
           <CardContent className="flex flex-col h-full p-4 sm:p-6 md:p-8">
             <div className="flex-shrink-0 flex items-center justify-between mb-3 sm:mb-4">
               <div className="flex-1 text-center">
-                <div className="text-xs sm:text-sm font-semibold text-purple-200">
+                <div className="text-xs sm:text-sm font-semibold text-blue-300">
                   ANSWER
                 </div>
               </div>
@@ -323,7 +323,7 @@ export default function Flashcard({
                     onClick={handleBookmarkClick}
                     variant="ghost"
                     size="sm"
-                    className="text-purple-200 hover:text-white hover:bg-purple-800/50 transition-colors"
+                    className="text-blue-300 hover:text-white hover:bg-blue-800/50 transition-colors"
                     title={bookmarked ? "Remove bookmark" : "Add bookmark"}
                   >
                     {bookmarked ? (
@@ -339,7 +339,7 @@ export default function Flashcard({
                     onClick={handleTestClick}
                     variant="ghost"
                     size="sm"
-                    className="text-purple-200 hover:text-white hover:bg-purple-800/50 transition-colors"
+                    className="text-blue-300 hover:text-white hover:bg-blue-800/50 transition-colors"
                   >
                     <TestTube className="w-4 h-4 mr-2" />
                     Test
@@ -353,11 +353,11 @@ export default function Flashcard({
               sanitizedHtml={sanitizedAnswer}
               images={answerImages}
               onImageClick={handleImageClick}
-              borderColor="border-purple-400"
-              hoverBgColor="bg-purple-900/70"
+              borderColor="border-blue-400"
+              hoverBgColor="bg-blue-900/70"
             />
 
-            <div className="flex-shrink-0 mt-3 sm:mt-4 text-center text-xs sm:text-sm text-purple-200">
+            <div className="flex-shrink-0 mt-3 sm:mt-4 text-center text-xs sm:text-sm text-blue-300">
               Click to see question
             </div>
           </CardContent>

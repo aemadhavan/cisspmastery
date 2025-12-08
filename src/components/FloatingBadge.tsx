@@ -1,11 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { TrendingUp } from "lucide-react";
 import { useFloatingBadgeVisibility } from "@/hooks/useFloatingBadgeVisibility";
-
-const TrendingUp = dynamic(
-  () => import("lucide-react").then(mod => ({ default: mod.TrendingUp }))
-);
 
 interface CloseButtonProps {
   onClick: () => void;

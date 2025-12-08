@@ -189,15 +189,15 @@ export default async function ClassDetailPage({
   const userStatsData = await getUserStats(userId);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729]">
       {/* Performance Monitoring */}
       <PerformanceMonitor pageName="Class Detail Page (SSR)" showVisual={false} />
 
       {/* Header with Back Button */}
-      <div className="border-b border-gray-200 bg-white shadow-sm">
+      <div className="border-b border-gray-700/50 bg-transparent">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 hover:bg-blue-50">
+            <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>

@@ -124,14 +124,14 @@ export default async function DashboardPage() {
   const continueClass = classesWithProgress.find(cls => cls.progress > 0 && cls.progress < 100) || classesWithProgress[0];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729]">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}
         <div className="mb-12">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2">
             Welcome back, {userName}!
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-300 text-lg">
             Let&apos;s continue your journey to becoming a CISSP.
           </p>
         </div>

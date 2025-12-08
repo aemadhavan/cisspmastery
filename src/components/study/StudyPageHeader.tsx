@@ -65,12 +65,12 @@ export function StudyPageHeader({
             </div>
 
             {/* Progress Bar */}
-            <div className="mt-4">
+            <div className="mt-4 bg-slate-800/50 rounded-lg p-4 border border-slate-700">
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-400">Progress</span>
-                    <span className="text-sm text-gray-400">{Math.round(progress)}%</span>
+                    <span className="text-sm font-semibold text-white">Progress</span>
+                    <span className="text-sm font-bold text-blue-400">{Math.round(progress)}%</span>
                 </div>
-                <Progress value={progress} className="h-2" aria-label={progressLabel} />
+                <Progress value={progress} className="h-3" aria-label={progressLabel} />
             </div>
         </div>
     );

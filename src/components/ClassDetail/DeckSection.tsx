@@ -41,7 +41,7 @@ function isDeckRecommended(
 // Component: Empty state when no decks match filter
 function EmptyState() {
   return (
-    <Card className="bg-white border-gray-200">
+    <Card className="bg-white/95 border-gray-200">
       <CardContent className="py-8 text-center text-gray-500">
         No decks match the current filter.
       </CardContent>
@@ -68,13 +68,13 @@ export function DeckSection({
         onClick={onToggleExpand}
         className="w-full flex items-center justify-between mb-4 text-left"
       >
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-white">
           {title}
-          <span className="ml-3 text-sm font-normal text-gray-500">
+          <span className="ml-3 text-sm font-normal text-gray-300">
             ({decks.length} decks)
           </span>
         </h2>
-        <ChevronIcon className="w-6 h-6 text-gray-600" />
+        <ChevronIcon className="w-6 h-6 text-gray-300" />
       </button>
 
       {isExpanded && (

@@ -181,7 +181,7 @@ export default function DeckStudyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Loading Skeleton for better UX */}
           <div className="space-y-6 animate-pulse">
@@ -259,7 +259,7 @@ export default function DeckStudyPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729]">
       {/* Performance Monitoring */}
       <PerformanceMonitor pageName="Deck Study Page" showVisual={false} />
       {globalStyles}

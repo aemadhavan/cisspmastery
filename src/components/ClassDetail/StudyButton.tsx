@@ -30,7 +30,7 @@ export function StudyButton({
           <Play className="w-5 h-5 mr-2 fill-white" />
           STUDY
         </Button>
-        <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded mb-6 border border-amber-200">
+        <p className="text-sm text-amber-800 bg-amber-50/95 px-3 py-2 rounded mb-6 border border-amber-200">
           Quiz decks cannot be studied in class mode. Use the quick play button on each quiz deck to take the test.
         </p>
       </div>
@@ -53,7 +53,7 @@ export function StudyButton({
         </Button>
       </Link>
       {hasBothTypes && (
-        <p className="text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded mb-6 border border-blue-200 flex items-start gap-2">
+        <p className="text-sm text-blue-900 bg-blue-50/95 px-3 py-2 rounded mb-6 border border-blue-200 flex items-start gap-2">
           <span className="text-blue-600 font-semibold flex-shrink-0">ℹ️</span>
           <span>
             <strong>{flashcardDeckIds.length} flashcard deck{flashcardDeckIds.length !== 1 ? 's' : ''}</strong> will be studied.

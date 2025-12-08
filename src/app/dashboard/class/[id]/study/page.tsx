@@ -141,10 +141,10 @@ export default function ClassStudyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center items-center min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           </div>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function ClassStudyPage() {
 
   if (flashcards.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Link href={`/dashboard/class/${classId}`}>
             <Button variant="ghost" className="text-white mb-6">
@@ -177,7 +177,7 @@ export default function ClassStudyPage() {
   const allCardsStudied = studiedCards.size === flashcards.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-[#0f1729] via-[#1a2235] to-[#0f1729]">
       {/* Performance Monitoring */}
       <PerformanceMonitor pageName="Class Study Page" showVisual={false} />
 
@@ -237,13 +237,13 @@ export default function ClassStudyPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 onClick={handleReset}
-                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Study Again
               </Button>
               <Link href={`/dashboard/class/${classId}`}>
-                <Button variant="outline" className="border-purple-400 text-purple-200 hover:bg-purple-500/10 w-full sm:w-auto">
+                <Button variant="outline" className="border-blue-400 text-blue-200 hover:bg-blue-500/10 w-full sm:w-auto">
                   Back to {className}
                 </Button>
               </Link>
@@ -268,12 +268,12 @@ export default function ClassStudyPage() {
 
       {/* Fixed Bottom Rating Bar */}
       {!allCardsStudied && showRating && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent backdrop-blur-lg border-t border-slate-700 py-6 px-4 z-50 animate-fade-in">
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0f1729] via-[#1a2235] to-transparent backdrop-blur-lg border-t border-blue-500/30 py-6 px-4 z-50 animate-fade-in">
           <div className="container mx-auto max-w-4xl">
             <p className="text-center text-white text-lg font-semibold mb-4">
               How well did you know this?
             </p>
-            <p className="text-center text-gray-400 text-sm mb-6">
+            <p className="text-center text-gray-300 text-sm mb-6">
               Be honest - this helps us optimize your learning
             </p>
             <div className="flex justify-center gap-2 sm:gap-4">
