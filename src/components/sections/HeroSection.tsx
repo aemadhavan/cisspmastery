@@ -44,7 +44,7 @@ function CTAPlaceholder() {
 
 export default function HeroSection() {
     return (
-        <section className="relative pt-20 lg:pt-32 pb-20 lg:pb-28 overflow-hidden">
+        <section className="relative pt-12 lg:pt-20 pb-20 lg:pb-28 overflow-hidden">
             {/* Background gradients */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl" />
