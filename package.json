@@ -23,7 +23,7 @@
         "test:e2e:capture-auth": "tsx scripts/capture-auth-session.ts"
     },
     "dependencies": {
-        "@clerk/nextjs": "^6.35.5",
+        "@clerk/nextjs": "^6.36.5",
         "@opentelemetry/context-async-hooks": "^2.2.0",
         "@radix-ui/react-avatar": "^1.1.11",
         "@radix-ui/react-collapsible": "^1.1.12",
