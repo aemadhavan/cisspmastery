@@ -46,7 +46,7 @@
         "@tiptap/extension-table-row": "^3.10.7",
         "@tiptap/react": "^3.10.7",
         "@tiptap/starter-kit": "^3.10.7",
-        "@vercel/blob": "^2.0.0",
+        "@vercel/blob": "^2.0.1",
         "@vercel/kv": "^3.0.0",
         "@vercel/postgres": "^0.10.0",
         "@xata.io/client": "^0.30.1",
